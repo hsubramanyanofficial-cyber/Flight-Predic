@@ -1,0 +1,6 @@
+{
+  "name": "Flight Price Prediction System (FPPS)",
+  "description": "Intelligent airfare platform for Indian travellers combining live flight search, machine-learning price predictions, historical fare analytics, price tracking, alerts, and personalized recommendations in Indian Rupees (₹).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

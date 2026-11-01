@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net: Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Validation Helper
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email', 'homeAirport', 'defaultCabinClass']) &&
+        data.keys().hasOnly(['userId', 'email', 'displayName', 'homeAirport', 'preferredAirlines', 'defaultCabinClass', 'budgetAlertThresholdPercent', 'inAppAlerts', 'emailAlerts', 'theme', 'updatedAt']) &&
+        data.userId == request.auth.uid &&
+        data.email is string && data.email.size() <= 150 &&
+        data.homeAirport is string && data.homeAirport.size() == 3 &&
+        data.defaultCabinClass in ['economy', 'premium_economy', 'business'];
+    }
+
+    // Tracked Flight Validation Helper
+    function isValidTrackedFlight(data) {
+      return data.keys().hasAll(['id', 'userId', 'origin', 'destination', 'departureDate', 'targetPriceInr', 'isActive']) &&
+        data.userId == request.auth.uid &&
+        data.origin is string && data.origin.size() == 3 &&
+        data.destination is string && data.destination.size() == 3 &&
+        data.targetPriceInr is number && data.targetPriceInr > 0 &&
+        data.isActive is bool;
+    }
+
+    // Notification Validation Helper
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'message', 'type', 'read', 'timestamp']) &&
+        data.userId == request.auth.uid &&
+        data.title is string && data.title.size() <= 150 &&
+        data.message is string && data.message.size() <= 500 &&
+        data.type in ['PRICE_DROP', 'TARGET_MET', 'PREDICTION_UPDATE', 'SYSTEM'] &&
+        data.read is bool;
+    }
+
+    // Match /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && incoming().userId == existing().userId;
+      allow delete: if false;
+
+      // Sub-collection /users/{userId}/trackedFlights/{trackedFlightId}
+      match /trackedFlights/{trackedFlightId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(trackedFlightId) && isValidTrackedFlight(incoming());
+        allow update: if isOwner(userId) && isValidId(trackedFlightId) && isValidTrackedFlight(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(trackedFlightId);
+      }
+
+      // Sub-collection /users/{userId}/notifications/{notificationId}
+      match /notifications/{notificationId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming());
+        allow update: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(notificationId);
+      }
+    }
+  }
+}
