@@ -5,7 +5,14 @@ import { CabinClass } from '../types';
 import { User, Settings, ShieldCheck, Database, Key, CheckCircle, Bell, Sliders, Cpu, Save } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
-  const { userPreferences, updatePreferences } = useApp();
+  const {
+    userPreferences,
+    updatePreferences,
+    currentUser,
+    signInWithGoogle,
+    logout,
+    trackedFlights
+  } = useApp();
 
   const [displayName, setDisplayName] = useState(userPreferences?.displayName || 'Subramanyan H.');
   const [email, setEmail] = useState(userPreferences?.email || 'h.subramanyanofficial@gmail.com');
@@ -80,6 +87,91 @@ export const UserProfile: React.FC = () => {
           <span>Preferences updated and saved to persistent storage.</span>
         </div>
       )}
+
+      {/* Firebase Authentication & Cloud Firestore Integration Banner */}
+      <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl space-y-5">
+        <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span>Firebase Authentication & Cloud Firestore</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  Provisioned & Active
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Database: <code className="text-slate-300">ai-studio-flightpricepredi-8b026c20-f06c-404d-abba-d01536911377</code>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="px-3.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                className="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition flex items-center gap-2"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.4 8.8 5 12 5z" />
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z" />
+                  <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.3 0 10.1 0 12s.6 3.7 1.6 5.6l3.7-2.9z" />
+                  <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.8-2.4-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z" />
+                </svg>
+                <span>Sign in with Google</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {currentUser ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+              <span className="text-[11px] text-slate-400 block mb-1">Authenticated Account</span>
+              <span className="font-semibold text-white truncate block">
+                {currentUser.displayName || 'Google Traveller'}
+              </span>
+              <span className="text-[11px] text-slate-400 truncate block">{currentUser.email}</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+              <span className="text-[11px] text-slate-400 block mb-1">Security & Rules</span>
+              <span className="font-semibold text-emerald-400 block">RBAC & Owner Rules Deployed</span>
+              <span className="text-[11px] text-slate-400 block">UID: {currentUser.uid.slice(0, 14)}...</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+              <span className="text-[11px] text-slate-400 block mb-1">Synced Watchlist</span>
+              <span className="font-semibold text-sky-400 block">{trackedFlights.length} Tracked Flight{trackedFlights.length !== 1 ? 's' : ''}</span>
+              <span className="text-[11px] text-slate-400 block">Real-time Firestore Snapshot</span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs text-slate-400 leading-relaxed bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
+            <div>
+              <span className="font-semibold text-slate-300 block mb-0.5">Guest Mode Active</span>
+              Your flight searches and alerts are stored locally. Sign in with Google to synchronize your alerts across all devices and receive price drop alerts.
+            </div>
+            <button
+              onClick={signInWithGoogle}
+              className="shrink-0 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 font-semibold transition"
+            >
+              Sign In Now
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Main Settings Form */}
       <form onSubmit={handleSave} className="p-6 sm:p-8 rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl space-y-6">
@@ -277,12 +369,12 @@ export const UserProfile: React.FC = () => {
           <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/60 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-white">Firestore Persistence</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
-                Ready for Provision
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Connected
               </span>
             </div>
             <p className="text-slate-400 leading-relaxed">
-              <code className="text-sky-300">firebase-blueprint.json</code> and zero-trust <code className="text-sky-300">firestore.rules</code> are generated. Currently utilizing atomic server-side JSON persistence across restarts.
+              Database <code className="text-sky-300">ai-studio-flightpricepredi-8b026c20-f06c-404d-abba-d01536911377</code> active on project <code className="text-sky-300">superb-bedrock-16ppv</code> with deployed security rules.
             </p>
           </div>
 

@@ -169,3 +169,69 @@ export async function fetchRecommendations(): Promise<{
   if (!res.ok) throw new Error('Failed to fetch recommendations');
   return res.json();
 }
+
+export async function sendChatMessage(params: {
+  message: string;
+  history: Array<{ role: 'user' | 'model'; text: string }>;
+  model?: string;
+}): Promise<{ reply: string; model: string }> {
+  const res = await fetch(`${BASE_URL}/gemini/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Chat request failed');
+  }
+  return res.json();
+}
+
+export async function queryMapsGrounding(params: {
+  prompt: string;
+  airportCode?: string;
+}): Promise<{ text: string; groundingChunks: any[]; airport: string }> {
+  const res = await fetch(`${BASE_URL}/gemini/maps-grounding`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Maps grounding failed');
+  }
+  return res.json();
+}
+
+export async function transcribeAudio(params: {
+  audioBase64: string;
+  mimeType?: string;
+}): Promise<{ transcription: string }> {
+  const res = await fetch(`${BASE_URL}/gemini/transcribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Audio transcription failed');
+  }
+  return res.json();
+}
+
+export async function generateRouteVideo(params: {
+  prompt: string;
+  aspectRatio?: '16:9' | '9:16';
+}): Promise<{ videoBase64: string; mimeType: string; aspectRatio: string }> {
+  const res = await fetch(`${BASE_URL}/gemini/generate-video`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Video generation failed');
+  }
+  return res.json();
+}
+

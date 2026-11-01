@@ -15,7 +15,12 @@ import { FareAnalytics } from './components/FareAnalytics';
 import { TrackedFlights } from './components/TrackedFlights';
 import { Recommendations } from './components/Recommendations';
 import { UserProfile } from './components/UserProfile';
-import { Plane, ShieldCheck, Heart } from 'lucide-react';
+import { GeminiChatbot } from './components/GeminiChatbot';
+import { LiveVoiceAssistant } from './components/LiveVoiceAssistant';
+import { AirportGrounding } from './components/AirportGrounding';
+import { VideoGeneration } from './components/VideoGeneration';
+import { AudioTranscription } from './components/AudioTranscription';
+import { Plane, ShieldCheck, Sparkles } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
@@ -36,6 +41,16 @@ const AppContent: React.FC = () => {
         return <TrackedFlights />;
       case 'recommendations':
         return <Recommendations />;
+      case 'chatbot':
+        return <GeminiChatbot />;
+      case 'voice':
+        return <LiveVoiceAssistant />;
+      case 'maps':
+        return <AirportGrounding />;
+      case 'video':
+        return <VideoGeneration />;
+      case 'transcribe':
+        return <AudioTranscription />;
       case 'profile':
         return <UserProfile />;
       default:
@@ -73,6 +88,13 @@ const AppContent: React.FC = () => {
             <button onClick={() => setActiveTab('predictions')} className="hover:text-white transition">ML Predictions</button>
             <button onClick={() => setActiveTab('analytics')} className="hover:text-white transition">Fare Analytics</button>
             <button onClick={() => setActiveTab('tracked')} className="hover:text-white transition">Price Alerts</button>
+            <button onClick={() => setActiveTab('chatbot')} className="hover:text-sky-400 transition flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-sky-400" /> AI Concierge
+            </button>
+            <button onClick={() => setActiveTab('voice')} className="hover:text-sky-400 transition">Live Voice</button>
+            <button onClick={() => setActiveTab('maps')} className="hover:text-sky-400 transition">Airport Maps</button>
+            <button onClick={() => setActiveTab('video')} className="hover:text-sky-400 transition">Video Studio</button>
+            <button onClick={() => setActiveTab('transcribe')} className="hover:text-sky-400 transition">Voice-to-Search</button>
             <button onClick={() => setActiveTab('profile')} className="hover:text-white transition">Settings</button>
           </div>
 

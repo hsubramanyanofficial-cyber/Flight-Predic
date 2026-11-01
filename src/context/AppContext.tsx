@@ -1,12 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../firebase';
 import { FlightOffer, TrackedFlight, InAppNotification, UserPreferences, CabinClass } from '../types';
 import * as api from '../services/api';
 
-export type NavTab = 'home' | 'search' | 'compare' | 'predictions' | 'analytics' | 'tracked' | 'recommendations' | 'profile';
+export type NavTab =
+  | 'home'
+  | 'search'
+  | 'compare'
+  | 'predictions'
+  | 'analytics'
+  | 'tracked'
+  | 'recommendations'
+  | 'chatbot'
+  | 'voice'
+  | 'maps'
+  | 'video'
+  | 'transcribe'
+  | 'profile';
 
 interface AppContextType {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
+  currentUser: User | null;
+  isAuthReady: boolean;
+  signInWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
   userPreferences: UserPreferences | null;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
   trackedFlights: TrackedFlight[];
@@ -59,6 +79,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [trackedFlights, setTrackedFlights] = useState<TrackedFlight[]>([]);
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
@@ -77,7 +99,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     cabinClass: 'economy' as CabinClass
   });
 
-  const loadData = async () => {
+  // Track Firebase auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      setIsAuthReady(true);
+
+      if (user) {
+        // Sync user profile with Firestore
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const snap = await getDoc(userDocRef);
+
+          if (!snap.exists()) {
+            const initialPref: UserPreferences = {
+              userId: user.uid,
+              displayName: user.displayName || 'Indian Flyer',
+              email: user.email || '',
+              homeAirport: 'DEL',
+              preferredAirlines: ['IndiGo', 'Vistara', 'Air India'],
+              maxStops: 1,
+              defaultCabinClass: 'economy',
+              budgetAlertThresholdPercent: 10,
+              inAppAlerts: true,
+              emailAlerts: false,
+              theme: 'dark'
+            };
+            await setDoc(userDocRef, initialPref);
+            setUserPreferences(initialPref);
+          } else {
+            setUserPreferences(snap.data() as UserPreferences);
+          }
+        } catch (err) {
+          console.error('Error syncing user profile with Firestore:', err);
+        }
+
+        // Attach real-time snapshot listener for tracked flights
+        const trackedColRef = collection(db, 'users', user.uid, 'trackedFlights');
+        const unsubTracked = onSnapshot(trackedColRef, (snapshot) => {
+          const list: TrackedFlight[] = [];
+          snapshot.forEach(docSnap => {
+            list.push(docSnap.data() as TrackedFlight);
+          });
+          if (list.length > 0) {
+            setTrackedFlights(list);
+          }
+        }, (err) => {
+          handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/trackedFlights`);
+        });
+
+        // Attach real-time snapshot listener for notifications
+        const notifsColRef = collection(db, 'users', user.uid, 'notifications');
+        const unsubNotifs = onSnapshot(notifsColRef, (snapshot) => {
+          const notifList: InAppNotification[] = [];
+          snapshot.forEach(docSnap => {
+            notifList.push(docSnap.data() as InAppNotification);
+          });
+          if (notifList.length > 0) {
+            setNotifications(notifList);
+          }
+        }, (err) => {
+          handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notifications`);
+        });
+
+        return () => {
+          unsubTracked();
+          unsubNotifs();
+        };
+      } else {
+        // User logged out: load local default persistence
+        loadLocalData();
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const loadLocalData = async () => {
     try {
       const [prefs, tracked, notifs] = await Promise.all([
         api.fetchUserPreferences().catch(() => null),
@@ -88,18 +186,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTrackedFlights(tracked || []);
       setNotifications(notifs || []);
     } catch (e) {
-      console.error('Error loading initial app context data:', e);
+      console.error('Error loading local data:', e);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const signInWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  };
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     try {
-      const updated = await api.saveUserPreferences(updates);
-      setUserPreferences(updated);
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userDocRef, updates, { merge: true });
+        setUserPreferences(prev => (prev ? { ...prev, ...updates } : null));
+      } else {
+        const updated = await api.saveUserPreferences(updates);
+        setUserPreferences(updated);
+      }
     } catch (err) {
       console.error('Failed to save preferences:', err);
     }
@@ -127,19 +244,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     preferredAirline?: string;
   }) => {
     const newTrack = await api.addTrackedFlight(data);
+    
+    // If authenticated, also persist to Firestore
+    if (currentUser) {
+      try {
+        const trackDocRef = doc(db, 'users', currentUser.uid, 'trackedFlights', newTrack.id);
+        await setDoc(trackDocRef, {
+          ...newTrack,
+          userId: currentUser.uid
+        });
+      } catch (err) {
+        console.error('Error persisting to Firestore:', err);
+      }
+    }
+
     setTrackedFlights(prev => [newTrack, ...prev]);
-    // Refresh notifications
     api.fetchNotifications().then(setNotifications).catch(() => {});
     return newTrack;
   };
 
   const toggleTrackingActive = async (id: string, isActive: boolean) => {
     const updated = await api.updateTrackedFlight(id, { isActive });
+    if (currentUser) {
+      try {
+        const trackDocRef = doc(db, 'users', currentUser.uid, 'trackedFlights', id);
+        await setDoc(trackDocRef, { isActive }, { merge: true });
+      } catch (err) {
+        console.error(err);
+      }
+    }
     setTrackedFlights(prev => prev.map(t => t.id === id ? updated : t));
   };
 
   const removeTracking = async (id: string) => {
     await api.deleteTrackedFlight(id);
+    if (currentUser) {
+      try {
+        const trackDocRef = doc(db, 'users', currentUser.uid, 'trackedFlights', id);
+        await deleteDoc(trackDocRef);
+      } catch (err) {
+        console.error(err);
+      }
+    }
     setTrackedFlights(prev => prev.filter(t => t.id !== id));
   };
 
@@ -187,6 +333,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         activeTab,
         setActiveTab,
+        currentUser,
+        isAuthReady,
+        signInWithGoogle,
+        logout,
         userPreferences,
         updatePreferences,
         trackedFlights,

@@ -1,9 +1,12 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { searchAirports, INDIAN_AIRPORTS } from './src/data/airports.ts';
+import { WebSocketServer, WebSocket } from 'ws';
+import { GoogleGenAI, Modality } from '@google/genai';
+import { searchAirports, INDIAN_AIRPORTS, getAirportByCode } from './src/data/airports.ts';
 import { predictFlightFare, FPPS_MODEL_METADATA } from './src/ml/model.ts';
 import { getRouteAnalytics, evaluatePriceIntelligence } from './src/data/analytics.ts';
 import { generateFlightOffers } from './src/services/flightEngine.ts';
@@ -17,7 +20,17 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+
+// Shared server-side Google GenAI client with required header
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build'
+    }
+  }
+});
 
 // Persistent Data Storage setup
 const DATA_DIR = path.join(__dirname, 'data');
@@ -151,7 +164,6 @@ function saveStore(data: FPPSDataStore) {
 
 let store = loadStore();
 
-// --- External Flight Provider Adapter Check ---
 function checkExternalProviderConfig() {
   const amadeusKey = process.env.AMADEUS_CLIENT_ID;
   const amadeusSecret = process.env.AMADEUS_CLIENT_SECRET;
@@ -177,10 +189,9 @@ function checkExternalProviderConfig() {
 }
 
 // -------------------------------------------------------------
-// API ROUTES
+// CORE AIRFARE API ROUTES
 // -------------------------------------------------------------
 
-// 1. Health check & configuration
 app.get('/api/health', (req: Request, res: Response) => {
   const provider = checkExternalProviderConfig();
   res.json({
@@ -192,7 +203,7 @@ app.get('/api/health', (req: Request, res: Response) => {
     provider,
     mlModel: FPPS_MODEL_METADATA,
     persistence: {
-      type: 'Local Atomic JSON Store (Ready for Firebase Firestore sync)',
+      type: 'Firestore & Local Atomic Store',
       recordsCount: {
         trackedFlights: store.trackedFlights.length,
         notifications: store.notifications.length
@@ -201,14 +212,12 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// 2. Airports search
 app.get('/api/airports', (req: Request, res: Response) => {
   const query = (req.query.q as string) || '';
   const results = searchAirports(query);
   res.json(results);
 });
 
-// 3. Flight Search
 app.get('/api/flights/search', async (req: Request, res: Response) => {
   const origin = ((req.query.origin as string) || 'DEL').toUpperCase();
   const destination = ((req.query.destination as string) || 'BOM').toUpperCase();
@@ -222,8 +231,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
 
   const providerInfo = checkExternalProviderConfig();
 
-  // If live provider credentials were provided, we would call them here.
-  // When not provided, we execute generateFlightOffers honestly:
   let offers = generateFlightOffers({
     origin,
     destination,
@@ -236,7 +243,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
     sortBy
   });
 
-  // Apply filters
   if (maxStops !== undefined) {
     offers = offers.filter(o => o.stops <= maxStops);
   }
@@ -244,7 +250,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
     offers = offers.filter(o => o.airlineName.toLowerCase().includes(airline.toLowerCase()) || o.airlineCode === airline);
   }
 
-  // Sorting
   if (sortBy === 'price') {
     offers.sort((a, b) => a.fare - b.fare);
   } else if (sortBy === 'duration') {
@@ -253,7 +258,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
     offers.sort((a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime());
   }
 
-  // Generate price prediction for this route & date
   const prediction = predictFlightFare({
     origin,
     destination,
@@ -262,7 +266,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
     actualFare: offers.length > 0 ? offers[0].fare : undefined
   });
 
-  // Price intelligence benchmark
   const intelligence = offers.length > 0
     ? evaluatePriceIntelligence({ origin, destination, fareInr: offers[0].fare, cabinClass })
     : null;
@@ -282,7 +285,6 @@ app.get('/api/flights/search', async (req: Request, res: Response) => {
   });
 });
 
-// 4. ML Price Prediction API
 app.post('/api/prediction', (req: Request, res: Response) => {
   const { origin, destination, travelDate, cabinClass, airline, stops, departureHour, actualFare } = req.body;
   if (!origin || !destination || !travelDate) {
@@ -303,7 +305,6 @@ app.post('/api/prediction', (req: Request, res: Response) => {
   res.json(prediction);
 });
 
-// 5. Historical Route Analytics
 app.get('/api/analytics/route', (req: Request, res: Response) => {
   const origin = ((req.query.origin as string) || 'DEL').toUpperCase();
   const destination = ((req.query.destination as string) || 'BOM').toUpperCase();
@@ -311,7 +312,6 @@ app.get('/api/analytics/route', (req: Request, res: Response) => {
   res.json(analytics);
 });
 
-// 6. Price Intelligence Evaluation
 app.get('/api/intelligence', (req: Request, res: Response) => {
   const origin = ((req.query.origin as string) || 'DEL').toUpperCase();
   const destination = ((req.query.destination as string) || 'BOM').toUpperCase();
@@ -321,7 +321,6 @@ app.get('/api/intelligence', (req: Request, res: Response) => {
   res.json(intelligence);
 });
 
-// 7. Tracked Flights API
 app.get('/api/tracked-flights', (req: Request, res: Response) => {
   res.json(store.trackedFlights);
 });
@@ -358,9 +357,6 @@ app.post('/api/tracked-flights', (req: Request, res: Response) => {
   };
 
   store.trackedFlights.unshift(newTrack);
-  saveStore(store);
-
-  // Create confirmation notification
   store.notifications.unshift({
     id: `notif_${Date.now()}`,
     userId: 'usr_default',
@@ -403,7 +399,6 @@ app.delete('/api/tracked-flights/:id', (req: Request, res: Response) => {
   res.json({ success: true, deleted: store.trackedFlights.length < initialLen });
 });
 
-// Run live fare monitoring simulation on all tracked flights
 app.post('/api/tracked-flights/check-all', (req: Request, res: Response) => {
   let updatedCount = 0;
   let alertsTriggered = 0;
@@ -411,8 +406,7 @@ app.post('/api/tracked-flights/check-all', (req: Request, res: Response) => {
   store.trackedFlights.forEach(track => {
     if (!track.isActive) return;
 
-    // Simulate price fluctuation check
-    const variance = (Math.random() * 400) - 200; // -200 to +200
+    const variance = (Math.random() * 400) - 200;
     const newPrice = Math.max(1800, Math.round((track.currentLowestPriceInr + variance) / 50) * 50);
     const prevPrice = track.currentLowestPriceInr;
     track.currentLowestPriceInr = newPrice;
@@ -424,7 +418,6 @@ app.post('/api/tracked-flights/check-all', (req: Request, res: Response) => {
     });
     updatedCount++;
 
-    // Check if target met or price drop
     if (newPrice <= track.targetPriceInr) {
       alertsTriggered++;
       store.notifications.unshift({
@@ -460,7 +453,6 @@ app.post('/api/tracked-flights/check-all', (req: Request, res: Response) => {
   res.json({ success: true, updatedCount, alertsTriggered, trackedFlights: store.trackedFlights });
 });
 
-// 8. Notifications API
 app.get('/api/notifications', (req: Request, res: Response) => {
   res.json(store.notifications);
 });
@@ -481,7 +473,6 @@ app.post('/api/notifications/clear-all', (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// 9. User Preferences API
 app.get('/api/preferences', (req: Request, res: Response) => {
   const prefs = store.userPreferences['usr_default'];
   res.json(prefs);
@@ -494,12 +485,10 @@ app.post('/api/preferences', (req: Request, res: Response) => {
   res.json(updated);
 });
 
-// 10. Personalized Recommendations API
 app.get('/api/recommendations', (req: Request, res: Response) => {
   const user = store.userPreferences['usr_default'];
   const homeAirport = user?.homeAirport || 'DEL';
 
-  // Popular destinations from home airport
   const popularDestinations = ['BOM', 'BLR', 'GOI', 'CCU', 'MAA'].filter(d => d !== homeAirport);
   const sampleDest = popularDestinations[0];
   const travelDate = new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0];
@@ -548,8 +537,282 @@ app.get('/api/recommendations', (req: Request, res: Response) => {
   });
 });
 
-// Vite Middleware integration for development
+// -------------------------------------------------------------
+// GEMINI AI INTEGRATION ENDPOINTS
+// -------------------------------------------------------------
+
+// 1. Multi-turn Gemini Chatbot with Model Routing
+// Models: gemini-4-argon (complex), gemini-3.8-flash (general), gemini-3.1-flash-lite (fast)
+app.post('/api/gemini/chat', async (req: Request, res: Response) => {
+  const { history = [], message, model = 'gemini-3.8-flash' } = req.body;
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required.' });
+  }
+
+  // System instruction tailored to Indian airfare & travel tech
+  const systemInstruction = `You are FPPS Airfare AI, an expert travel-tech advisor for Indian aviation and international flights.
+You specialize in Indian carriers (IndiGo 6E, Air India AI, Vistara UK, Akasa Air QP, SpiceJet SG, Air India Express IX).
+You assist users with:
+- Best times to book domestic & international flights from India
+- Decoding dynamic pricing, airline fare rules, cancellation/reschedule fees, and baggage limits
+- Analyzing historical price trends, seasonality (Diwali, Holi, Summer vacation, New Year surges)
+- DGCA passenger rights (delays, baggage loss, cancellations)
+- Airport transit tips for major Indian hubs (DEL IGI T1/T2/T3, BOM T1/T2, BLR Kempegowda Garden Terminal T1/T2, HYD, MAA, CCU)
+
+Format your responses with clean, readable markdown prose with bold key figures and bulleted takeaways where appropriate. Always quote prices in Indian Rupees (₹).`;
+
+  try {
+    // Choose model safely
+    let chosenModel = model;
+    if (!['gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'].includes(chosenModel)) {
+      chosenModel = 'gemini-3.8-flash';
+    }
+
+    // Convert history format to GenAI Chat contents
+    const contents: any[] = [];
+    history.forEach((h: { role: string; text: string }) => {
+      contents.push({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: h.text }]
+      });
+    });
+    // Add current turn
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }]
+    });
+
+    const response = await ai.models.generateContent({
+      model: chosenModel,
+      contents,
+      config: {
+        systemInstruction
+      }
+    });
+
+    const reply = response.text || 'I apologize, but I could not formulate a response. Please try again.';
+    res.json({ reply, model: chosenModel });
+  } catch (err: any) {
+    console.error('Gemini Chat Error:', err);
+    // If paid model (argon) failed due to API key restrictions, fall back to gemini-3.8-flash
+    if (model === 'gemini-4-argon') {
+      try {
+        const fallbackResponse = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: [{ role: 'user', parts: [{ text: message }] }],
+          config: { systemInstruction }
+        });
+        return res.json({
+          reply: fallbackResponse.text,
+          model: 'gemini-3.8-flash (fallback from gemini-4-argon)'
+        });
+      } catch (fallbackErr: any) {
+        return res.status(500).json({ error: fallbackErr.message || 'Chat generation failed' });
+      }
+    }
+    res.status(500).json({ error: err.message || 'Chat generation failed' });
+  }
+});
+
+// 2. Google Maps Grounding
+// Uses gemini-3.8-flash with googleMaps tool
+app.post('/api/gemini/maps-grounding', async (req: Request, res: Response) => {
+  const { prompt, airportCode } = req.body;
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt is required.' });
+  }
+
+  // Coordinates for major Indian airports to seed retrievalConfig
+  const airportCoords: Record<string, { lat: number; lng: number; name: string }> = {
+    DEL: { lat: 28.5562, lng: 77.1000, name: 'Indira Gandhi International Airport, New Delhi' },
+    BOM: { lat: 19.0896, lng: 72.8656, name: 'Chhatrapati Shivaji Maharaj International Airport, Mumbai' },
+    BLR: { lat: 13.1986, lng: 77.7066, name: 'Kempegowda International Airport, Bengaluru' },
+    MAA: { lat: 12.9941, lng: 80.1709, name: 'Chennai International Airport' },
+    CCU: { lat: 22.6547, lng: 88.4467, name: 'Netaji Subhash Chandra Bose International Airport, Kolkata' },
+    HYD: { lat: 17.2403, lng: 78.4294, name: 'Rajiv Gandhi International Airport, Hyderabad' },
+    GOI: { lat: 15.3808, lng: 73.8313, name: 'Dabolim Airport, Goa' },
+    GOX: { lat: 15.7644, lng: 73.8694, name: 'Manohar International Airport Mopa, Goa' }
+  };
+
+  const selectedCoord = airportCode && airportCoords[airportCode.toUpperCase()]
+    ? airportCoords[airportCode.toUpperCase()]
+    : airportCoords['DEL'];
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleMaps: {} }],
+        toolConfig: {
+          retrievalConfig: {
+            latLng: {
+              latitude: selectedCoord.lat,
+              longitude: selectedCoord.lng
+            }
+          }
+        }
+      }
+    });
+
+    const text = response.text || '';
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+
+    res.json({
+      text,
+      groundingChunks,
+      airport: selectedCoord.name
+    });
+  } catch (err: any) {
+    console.error('Google Maps Grounding Error:', err);
+    res.status(500).json({ error: err.message || 'Maps grounding failed' });
+  }
+});
+
+// 3. Audio Transcription (Microphone Speech-to-Text)
+// Uses gemini-3.5-transcribe
+app.post('/api/gemini/transcribe', async (req: Request, res: Response) => {
+  const { audioBase64, mimeType = 'audio/webm' } = req.body;
+  if (!audioBase64) {
+    return res.status(400).json({ error: 'Audio data is required.' });
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-transcribe',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: audioBase64
+            }
+          },
+          {
+            text: 'Transcribe this voice audio accurately. If it is in Hindi, English, or Hinglish, transcribe in clear text and note any flight origin, destination, or date mentioned.'
+          }
+        ]
+      }
+    });
+
+    const transcription = response.text || '';
+    res.json({ transcription });
+  } catch (err: any) {
+    console.error('Audio Transcription Error:', err);
+    res.status(500).json({ error: err.message || 'Audio transcription failed' });
+  }
+});
+
+// 4. Video Generation via Interactions API
+// Uses gemini-omni-1.1-flash with 16:9 or 9:16 aspect ratio
+app.post('/api/gemini/generate-video', async (req: Request, res: Response) => {
+  const { prompt, aspectRatio = '16:9' } = req.body;
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt is required.' });
+  }
+
+  const validRatio = aspectRatio === '9:16' ? '9:16' : '16:9';
+
+  try {
+    const interaction = await ai.interactions.create({
+      model: 'gemini-omni-1.1-flash',
+      input: prompt,
+      background: false,
+      store: false,
+      stream: false,
+      response_format: {
+        type: 'video',
+        aspect_ratio: validRatio,
+        duration: '5s',
+        resolution: '720p'
+      }
+    }, { timeout: 300000 });
+
+    const videoPart = interaction.output_video;
+    if (videoPart && videoPart.data) {
+      return res.json({
+        videoBase64: videoPart.data,
+        mimeType: videoPart.mime_type || 'video/mp4',
+        aspectRatio: validRatio
+      });
+    }
+
+    res.status(500).json({ error: 'No video output was returned by the model.' });
+  } catch (err: any) {
+    console.error('Video Generation Error:', err);
+    res.status(500).json({
+      error: err.message || 'Video generation failed. Note: gemini-omni-1.1-flash requires a billing-enabled API key in AI Studio Secrets.'
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// SERVER & WEBSOCKET SETUP (LIVE API)
+// -------------------------------------------------------------
+
 async function startServer() {
+  const server = http.createServer(app);
+
+  // Set up WebSocket server for Gemini Live Voice Assistant (gemini-3.8-live)
+  const wss = new WebSocketServer({ server, path: '/live-voice' });
+
+  wss.on('connection', async (clientWs: WebSocket) => {
+    console.log('Client connected to Gemini Live Voice session');
+    let session: any = null;
+
+    try {
+      session = await ai.live.connect({
+        model: 'gemini-3.8-live',
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
+          },
+          systemInstruction: 'You are FPPS Voice Assistant, a friendly and knowledgeable voice concierge for Indian travellers. You speak conversationally about flight fares, airline choices, airport tips, and travel questions in natural, concise spoken sentences.'
+        },
+        callbacks: {
+          onmessage: (message: any) => {
+            for (const part of message.serverContent?.modelTurn?.parts ?? []) {
+              if (part.inlineData?.data) {
+                // Forward 24kHz PCM audio back to the client browser
+                if (clientWs.readyState === WebSocket.OPEN) {
+                  clientWs.send(JSON.stringify({ audio: part.inlineData.data }));
+                }
+              }
+            }
+            if (message.serverContent?.interrupted) {
+              if (clientWs.readyState === WebSocket.OPEN) {
+                clientWs.send(JSON.stringify({ interrupted: true }));
+              }
+            }
+          }
+        }
+      });
+    } catch (liveErr) {
+      console.error('Live connect error:', liveErr);
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({ error: 'Failed to connect to Live API session.' }));
+      }
+    }
+
+    clientWs.on('message', (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.audio && session) {
+          session.sendRealtimeInput({
+            audio: { data: msg.audio, mimeType: 'audio/pcm;rate=16000' }
+          });
+        }
+      } catch (err) {
+        console.error('Error handling client audio message:', err);
+      }
+    });
+
+    clientWs.on('close', () => {
+      console.log('Client disconnected from Gemini Live Voice');
+    });
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -564,8 +827,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, () => {
-    console.log(`FPPS Server running at http://localhost:${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`FPPS Full-Stack Server & WebSocket running at http://localhost:${PORT}`);
   });
 }
 
