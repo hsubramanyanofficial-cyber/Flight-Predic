@@ -1,5 +1,6 @@
 import { RouteAnalytics, PriceIntelligence, PriceAssessment } from '../types';
 import { estimateRouteBase } from '../ml/model';
+import { getAirportByCode } from './airports';
 
 export function getRouteAnalytics(origin: string, destination: string): RouteAnalytics {
   const originCode = origin.toUpperCase();
@@ -7,6 +8,10 @@ export function getRouteAnalytics(origin: string, destination: string): RouteAna
   const route = `${originCode}-${destCode}`;
   const base = estimateRouteBase(originCode, destCode);
   const baseFare = base.baseFare;
+
+  const oAirport = getAirportByCode(originCode);
+  const dAirport = getAirportByCode(destCode);
+  const isDomestic = oAirport?.isDomestic && dAirport?.isDomestic;
 
   // Generate genuine historical series over 30 days
   const today = new Date();
@@ -37,48 +42,91 @@ export function getRouteAnalytics(origin: string, destination: string): RouteAna
   }
 
   // Airline statistics on this corridor
-  const airlineComparison = [
-    {
-      airlineCode: '6E',
-      airlineName: 'IndiGo',
-      avgFare: Math.round(baseFare * 0.98),
-      minFare: Math.round(baseFare * 0.82),
-      sampleCount: 1420,
-      onTimeRating: 88.5
-    },
-    {
-      airlineCode: 'AI',
-      airlineName: 'Air India',
-      avgFare: Math.round(baseFare * 1.12),
-      minFare: Math.round(baseFare * 0.89),
-      sampleCount: 980,
-      onTimeRating: 81.2
-    },
-    {
-      airlineCode: 'UK',
-      airlineName: 'Vistara',
-      avgFare: Math.round(baseFare * 1.18),
-      minFare: Math.round(baseFare * 0.94),
-      sampleCount: 1140,
-      onTimeRating: 89.8
-    },
-    {
-      airlineCode: 'QP',
-      airlineName: 'Akasa Air',
-      avgFare: Math.round(baseFare * 0.94),
-      minFare: Math.round(baseFare * 0.80),
-      sampleCount: 650,
-      onTimeRating: 87.1
-    },
-    {
-      airlineCode: 'SG',
-      airlineName: 'SpiceJet',
-      avgFare: Math.round(baseFare * 0.91),
-      minFare: Math.round(baseFare * 0.77),
-      sampleCount: 520,
-      onTimeRating: 74.5
-    }
-  ];
+  const airlineComparison = isDomestic
+    ? [
+        {
+          airlineCode: '6E',
+          airlineName: 'IndiGo',
+          avgFare: Math.round(baseFare * 0.98),
+          minFare: Math.round(baseFare * 0.82),
+          sampleCount: 1420,
+          onTimeRating: 88.5
+        },
+        {
+          airlineCode: 'AI',
+          airlineName: 'Air India',
+          avgFare: Math.round(baseFare * 1.12),
+          minFare: Math.round(baseFare * 0.89),
+          sampleCount: 980,
+          onTimeRating: 81.2
+        },
+        {
+          airlineCode: 'UK',
+          airlineName: 'Vistara',
+          avgFare: Math.round(baseFare * 1.18),
+          minFare: Math.round(baseFare * 0.94),
+          sampleCount: 1140,
+          onTimeRating: 89.8
+        },
+        {
+          airlineCode: 'QP',
+          airlineName: 'Akasa Air',
+          avgFare: Math.round(baseFare * 0.94),
+          minFare: Math.round(baseFare * 0.80),
+          sampleCount: 650,
+          onTimeRating: 87.1
+        },
+        {
+          airlineCode: 'SG',
+          airlineName: 'SpiceJet',
+          avgFare: Math.round(baseFare * 0.91),
+          minFare: Math.round(baseFare * 0.77),
+          sampleCount: 520,
+          onTimeRating: 74.5
+        }
+      ]
+    : [
+        {
+          airlineCode: 'EK',
+          airlineName: 'Emirates',
+          avgFare: Math.round(baseFare * 1.08),
+          minFare: Math.round(baseFare * 0.88),
+          sampleCount: 1820,
+          onTimeRating: 91.2
+        },
+        {
+          airlineCode: 'SQ',
+          airlineName: 'Singapore Airlines',
+          avgFare: Math.round(baseFare * 1.14),
+          minFare: Math.round(baseFare * 0.92),
+          sampleCount: 1450,
+          onTimeRating: 93.4
+        },
+        {
+          airlineCode: 'QR',
+          airlineName: 'Qatar Airways',
+          avgFare: Math.round(baseFare * 1.05),
+          minFare: Math.round(baseFare * 0.86),
+          sampleCount: 1620,
+          onTimeRating: 92.1
+        },
+        {
+          airlineCode: 'BA',
+          airlineName: 'British Airways',
+          avgFare: Math.round(baseFare * 1.02),
+          minFare: Math.round(baseFare * 0.84),
+          sampleCount: 1210,
+          onTimeRating: 84.6
+        },
+        {
+          airlineCode: 'LH',
+          airlineName: 'Lufthansa',
+          avgFare: Math.round(baseFare * 1.06),
+          minFare: Math.round(baseFare * 0.87),
+          sampleCount: 1180,
+          onTimeRating: 86.8
+        }
+      ];
 
   // Price distribution brackets
   const b1 = Math.round(baseFare * 0.8);

@@ -1,4 +1,5 @@
 import { CabinClass, PricePrediction, PredictionFactor } from '../types';
+import { calculateAirDistanceKm } from '../data/airports';
 
 export interface MLModelEvaluation {
   modelName: string;
@@ -84,15 +85,40 @@ const ROUTE_BASE_FARES: Record<string, { baseFare: number; distanceKm: number }>
   'BOM-SIN': { baseFare: 19800, distanceKm: 3900 },
   'DEL-BKK': { baseFare: 15200, distanceKm: 2930 },
   'BOM-LHR': { baseFare: 46000, distanceKm: 7200 },
-  'DEL-LHR': { baseFare: 48500, distanceKm: 6710 }
+  'DEL-LHR': { baseFare: 48500, distanceKm: 6710 },
+  'JFK-LHR': { baseFare: 42000, distanceKm: 5540 },
+  'LHR-JFK': { baseFare: 42000, distanceKm: 5540 },
+  'LHR-DXB': { baseFare: 38000, distanceKm: 5470 },
+  'DXB-LHR': { baseFare: 38000, distanceKm: 5470 },
+  'SIN-SYD': { baseFare: 34000, distanceKm: 6300 },
+  'SYD-SIN': { baseFare: 34000, distanceKm: 6300 },
+  'LAX-HND': { baseFare: 55000, distanceKm: 8810 },
+  'HND-LAX': { baseFare: 55000, distanceKm: 8810 },
+  'SFO-SIN': { baseFare: 68000, distanceKm: 13580 },
+  'SIN-SFO': { baseFare: 68000, distanceKm: 13580 },
+  'DEL-JFK': { baseFare: 72000, distanceKm: 11760 },
+  'JFK-DEL': { baseFare: 72000, distanceKm: 11760 },
+  'BOM-EWR': { baseFare: 74000, distanceKm: 12540 },
+  'CDG-JFK': { baseFare: 44000, distanceKm: 5830 },
+  'FRA-DXB': { baseFare: 36000, distanceKm: 4840 },
+  'HND-SIN': { baseFare: 32000, distanceKm: 5310 }
 };
 
 export function estimateRouteBase(origin: string, destination: string): { baseFare: number; distanceKm: number } {
   const key = `${origin.toUpperCase()}-${destination.toUpperCase()}`;
   if (ROUTE_BASE_FARES[key]) return ROUTE_BASE_FARES[key];
   
-  // Generic estimation for unlisted domestic / international corridors
-  return { baseFare: 5200, distanceKm: 1200 };
+  // Dynamic global Haversine calculation
+  const distanceKm = calculateAirDistanceKm(origin, destination);
+  
+  // Tiered yield curve based on flight distance
+  let ratePerKm = 5.2;
+  if (distanceKm > 5000) ratePerKm = 4.8;
+  if (distanceKm > 9000) ratePerKm = 4.4;
+  if (distanceKm < 1000) ratePerKm = 6.8;
+
+  const baseFare = Math.round((distanceKm * ratePerKm + 2200) / 100) * 100;
+  return { baseFare, distanceKm };
 }
 
 export function detectIndianFestivalPeak(dateStr: string): { isPeak: boolean; factor: number; festivalName?: string } {

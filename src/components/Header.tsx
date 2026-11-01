@@ -11,8 +11,10 @@ import {
   ChevronDown,
   LogIn,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Globe
 } from 'lucide-react';
+import { CURRENCIES, SupportedCurrency } from '../utils/currency';
 
 export const Header: React.FC = () => {
   const {
@@ -24,16 +26,23 @@ export const Header: React.FC = () => {
     userPreferences,
     currentUser,
     signInWithGoogle,
-    logout
+    logout,
+    currency,
+    setCurrency
   } = useApp();
 
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const aiMenuRef = useRef<HTMLDivElement>(null);
+  const currencyMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (aiMenuRef.current && !aiMenuRef.current.contains(event.target as Node)) {
         setAiMenuOpen(false);
+      }
+      if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target as Node)) {
+        setCurrencyMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -97,7 +106,7 @@ export const Header: React.FC = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
               <Plane className="h-4 w-4" />
             </div>
-            <span className="whitespace-nowrap">FPPS <span className="font-normal text-slate-400">· Airfare Intelligence</span></span>
+            <span className="whitespace-nowrap">FPPS <span className="font-normal text-slate-400">· Global Airfare Intelligence</span></span>
           </button>
         </div>
 
@@ -167,8 +176,50 @@ export const Header: React.FC = () => {
           </div>
         </nav>
 
-        {/* Zone 3: Actions (Compare, Notifications, Auth / Profile) */}
+        {/* Zone 3: Actions (Currency, Compare, Notifications, Auth / Profile) */}
         <div className="flex items-center gap-2.5 shrink-0">
+          
+          {/* Global Multi-Currency Dropdown */}
+          <div className="relative" ref={currencyMenuRef}>
+            <button
+              onClick={() => setCurrencyMenuOpen(!currencyMenuOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-slate-800 bg-slate-900 text-slate-200 text-xs font-mono font-medium hover:border-slate-700 hover:text-white transition"
+              title="Change display currency"
+            >
+              <Globe className="h-3.5 w-3.5 text-sky-400" />
+              <span>{currency} ({CURRENCIES[currency]?.symbol.trim()})</span>
+              <ChevronDown className={`h-3 w-3 transition-transform ${currencyMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {currencyMenuOpen && (
+              <div className="absolute right-0 mt-2 w-52 rounded-xl border border-slate-800 bg-slate-900/98 p-1.5 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 font-sans">
+                <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-1">
+                  Global Display Currency
+                </div>
+                {Object.values(CURRENCIES).map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => {
+                      setCurrency(c.code);
+                      setCurrencyMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
+                      currency === c.code
+                        ? 'bg-sky-500/20 text-sky-300 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-sky-400 w-5 text-center">{c.symbol.trim()}</span>
+                      <span>{c.code}</span>
+                    </span>
+                    <span className="text-[11px] text-slate-400">{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Comparison Tool Shortcut */}
           <button
             onClick={() => setActiveTab('compare')}

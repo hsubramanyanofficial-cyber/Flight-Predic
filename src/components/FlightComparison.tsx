@@ -1,11 +1,13 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Scale, X, ExternalLink, Sparkles, Check, Clock, Luggage, Utensils, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Scale, X, ExternalLink, Sparkles, Luggage, Utensils, ShieldCheck, ArrowRight } from 'lucide-react';
 import { evaluatePriceIntelligence } from '../data/analytics';
 import { predictFlightFare } from '../ml/model';
+import { PriceHistoryTrend } from './PriceHistoryTrend';
+import { formatCurrency } from '../utils/currency';
 
 export const FlightComparison: React.FC = () => {
-  const { comparisonList, removeFromComparison, clearComparison, setActiveTab } = useApp();
+  const { comparisonList, removeFromComparison, clearComparison, setActiveTab, currency } = useApp();
 
   if (comparisonList.length === 0) {
     return (
@@ -15,7 +17,7 @@ export const FlightComparison: React.FC = () => {
         </div>
         <h2 className="text-xl font-bold text-white">No Flights in Comparison</h2>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Select "Compare" on any 2 or 3 flights in your search results to inspect side-by-side airfares, baggage allowances, cancellation charges, and machine learning price assessments.
+          Select "Compare" on any 2 or 3 flights in your search results to inspect side-by-side airfares, 30-day historical price fluctuations, baggage allowances, and machine learning price assessments.
         </p>
         <button
           onClick={() => setActiveTab('search')}
@@ -28,6 +30,13 @@ export const FlightComparison: React.FC = () => {
     );
   }
 
+  // Derive route parameters from the flights being compared
+  const primaryRoute = comparisonList[0];
+  const originCode = primaryRoute.origin;
+  const destCode = primaryRoute.destination;
+  const originCity = primaryRoute.originCity;
+  const destCity = primaryRoute.destinationCity;
+
   return (
     <div className="space-y-8 pb-16">
       
@@ -39,8 +48,11 @@ export const FlightComparison: React.FC = () => {
             <span>Flight Comparison Matrix</span>
           </div>
           <h1 className="text-2xl font-bold text-white mt-1">
-            Comparing {comparisonList.length} Flight{comparisonList.length > 1 ? 's' : ''}
+            Comparing {comparisonList.length} Flight{comparisonList.length > 1 ? 's' : ''} on {originCode} → {destCode}
           </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Side-by-side feature matrix with predictive intelligence and 30-day historical corridor trends.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -59,9 +71,19 @@ export const FlightComparison: React.FC = () => {
         </div>
       </div>
 
+      {/* New Recharts Component: 30-Day Price History Trend Chart */}
+      <PriceHistoryTrend
+        route={`${originCode}-${destCode}`}
+        origin={originCode}
+        destination={destCode}
+        originCity={originCity}
+        destCity={destCity}
+        comparedFlights={comparisonList}
+      />
+
       {/* Comparison Grid */}
       <div className="overflow-x-auto">
-        <div className={`grid grid-cols-${comparisonList.length} gap-4 min-w-[700px]`}>
+        <div className={`grid grid-cols-1 md:grid-cols-${Math.min(comparisonList.length, 3)} gap-4 min-w-[700px]`}>
           {comparisonList.map(flight => {
             const dep = new Date(flight.departureTime);
             const arr = new Date(flight.arrivalTime);
@@ -109,18 +131,18 @@ export const FlightComparison: React.FC = () => {
                       <span className="font-semibold text-white text-sm">{flight.airlineName}</span>
                     </div>
                     <div className="text-xs font-mono text-slate-400 mt-1">
-                      {flight.flightNumber} · Airbus A320/321
+                      {flight.flightNumber}
                     </div>
                   </div>
 
                   {/* Big Price */}
                   <div className="p-3.5 rounded-lg border border-slate-800 bg-slate-950/60 text-center">
-                    <div className="text-xs text-slate-400">Total Price</div>
+                    <div className="text-xs text-slate-400">Total Fare</div>
                     <div className="text-2xl font-bold font-mono text-white mt-0.5 tabular-nums">
-                      ₹{flight.fare.toLocaleString('en-IN')}
+                      {formatCurrency(flight.fare, currency)}
                     </div>
                     <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                      Base ₹{flight.baseFare.toLocaleString('en-IN')} + ₹{flight.taxesAndFees.toLocaleString('en-IN')} Tax
+                      Base {formatCurrency(flight.baseFare, currency)} + {formatCurrency(flight.taxesAndFees, currency)} Taxes & Surcharges
                     </div>
                   </div>
 
@@ -141,7 +163,7 @@ export const FlightComparison: React.FC = () => {
                     <div className="flex justify-between items-center text-slate-300">
                       <span>Stops</span>
                       <span className={flight.stops === 0 ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
-                        {flight.stops === 0 ? 'Non-stop' : `${flight.stops} Stop`}
+                        {flight.stops === 0 ? 'Non-stop' : `${flight.stops} Stop (${flight.stopAirports?.join(', ') || 'Layover'})`}
                       </span>
                     </div>
                   </div>
@@ -166,19 +188,19 @@ export const FlightComparison: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex justify-between text-slate-400 font-mono">
-                        <span>Predicted Fare</span>
-                        <span>₹{prediction.predictedFare.toLocaleString('en-IN')}</span>
+                        <span>Predicted Fair Fare</span>
+                        <span>{formatCurrency(prediction.predictedFare, currency)}</span>
                       </div>
                       <div className="flex justify-between text-slate-400 font-mono">
                         <span>30-Day Median</span>
-                        <span>₹{intelligence.historicalMean.toLocaleString('en-IN')}</span>
+                        <span>{formatCurrency(intelligence.historicalMean, currency)}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Baggage & In-flight Service */}
                   <div className="space-y-2 py-3 border-t border-slate-800/80 text-xs">
-                    <div className="text-xs font-semibold text-slate-200">Amenities & Baggage</div>
+                    <div className="text-xs font-semibold text-slate-200">Amenities & Policy</div>
                     <div className="flex justify-between text-slate-300">
                       <span className="flex items-center gap-1.5 text-slate-400">
                         <Luggage className="h-3.5 w-3.5" /> Check-in Bag
@@ -193,16 +215,16 @@ export const FlightComparison: React.FC = () => {
                     </div>
                     <div className="flex justify-between text-slate-300">
                       <span className="flex items-center gap-1.5 text-slate-400">
-                        <Utensils className="h-3.5 w-3.5" /> Meal
+                        <Utensils className="h-3.5 w-3.5" /> Meal Service
                       </span>
-                      <span>{flight.fareRestrictions.mealIncluded ? 'Included' : 'Chargeable'}</span>
+                      <span>{flight.fareRestrictions.mealIncluded ? 'Complimentary' : 'Available for purchase'}</span>
                     </div>
                     <div className="flex justify-between text-slate-300">
                       <span className="flex items-center gap-1.5 text-slate-400">
-                        <ShieldCheck className="h-3.5 w-3.5" /> Cancellation
+                        <ShieldCheck className="h-3.5 w-3.5" /> Refund Policy
                       </span>
                       <span className={flight.fareRestrictions.refundable ? 'text-emerald-400' : 'text-slate-400'}>
-                        {flight.fareRestrictions.refundable ? `₹${flight.fareRestrictions.cancellationFee}` : 'Non-refundable'}
+                        {flight.fareRestrictions.refundable ? `Refundable (${formatCurrency(flight.fareRestrictions.cancellationFee, currency)} fee)` : 'Non-refundable'}
                       </span>
                     </div>
                   </div>
@@ -216,7 +238,7 @@ export const FlightComparison: React.FC = () => {
                   rel="noopener noreferrer"
                   className="mt-4 w-full py-2.5 text-xs font-semibold text-slate-950 bg-sky-400 hover:bg-sky-300 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  <span>Select & Book</span>
+                  <span>Select & Book Flight</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FlightOffer, PricePrediction, PriceIntelligence } from '../types';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 import { Clock, ShieldCheck, ChevronDown, ChevronUp, Bell, Scale, ExternalLink, Sparkles, Check, Luggage, Utensils } from 'lucide-react';
 
 interface FlightCardProps {
@@ -16,7 +17,8 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
     removeFromComparison,
     isFlightInComparison,
     trackFlight,
-    trackedFlights
+    trackedFlights,
+    currency
   } = useApp();
 
   const [expanded, setExpanded] = useState(false);
@@ -68,7 +70,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
       case 'RELATIVELY_LOW':
         return (
           <span className="text-xs font-semibold text-emerald-400">
-            Relatively Low {intelligence.savingsVsAvgInr ? `(₹${intelligence.savingsVsAvgInr.toLocaleString('en-IN')} below avg)` : ''}
+            Relatively Low {intelligence.savingsVsAvgInr ? `(${formatCurrency(intelligence.savingsVsAvgInr, currency)} below avg)` : ''}
           </span>
         );
       case 'RELATIVELY_HIGH':
@@ -183,7 +185,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
             <div className="flex items-baseline justify-between lg:justify-end gap-2">
               <span className="text-xs text-slate-400 font-medium">Total Fare</span>
               <span className="text-2xl font-bold font-mono text-white tabular-nums tracking-tight">
-                ₹{flight.fare.toLocaleString('en-IN')}
+                {formatCurrency(flight.fare, currency)}
               </span>
             </div>
 
@@ -191,12 +193,12 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
             {prediction && (
               <div className="mt-1 flex items-center justify-between lg:justify-end gap-1.5 text-xs text-slate-400 font-mono">
                 <Sparkles className="h-3 w-3 text-sky-400" />
-                <span>ML Predicted: ₹{prediction.predictedFare.toLocaleString('en-IN')}</span>
+                <span>ML Predicted: {formatCurrency(prediction.predictedFare, currency)}</span>
               </div>
             )}
             
             <div className="text-[11px] text-slate-400 mt-1 text-right">
-              Incl. ₹{flight.taxesAndFees.toLocaleString('en-IN')} taxes & fees
+              Incl. {formatCurrency(flight.taxesAndFees, currency)} taxes & fees
             </div>
           </div>
 
@@ -297,19 +299,19 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
               <span className="font-semibold text-slate-200">Fare Breakdown</span>
               <div className="flex justify-between text-slate-400 font-mono tabular-nums">
                 <span>Base Airfare</span>
-                <span>₹{flight.baseFare.toLocaleString('en-IN')}</span>
+                <span>{formatCurrency(flight.baseFare, currency)}</span>
               </div>
               <div className="flex justify-between text-slate-400 font-mono tabular-nums">
-                <span>Aviation Security Fee & Fuel</span>
-                <span>₹{Math.round(flight.taxesAndFees * 0.65).toLocaleString('en-IN')}</span>
+                <span>Security Surcharge & Fuel</span>
+                <span>{formatCurrency(Math.round(flight.taxesAndFees * 0.65), currency)}</span>
               </div>
               <div className="flex justify-between text-slate-400 font-mono tabular-nums">
-                <span>User Development Fee (UDF) & GST</span>
-                <span>₹{Math.round(flight.taxesAndFees * 0.35).toLocaleString('en-IN')}</span>
+                <span>Terminal Fee & Taxes</span>
+                <span>{formatCurrency(Math.round(flight.taxesAndFees * 0.35), currency)}</span>
               </div>
               <div className="flex justify-between text-white font-bold font-mono tabular-nums border-t border-slate-800 pt-1">
                 <span>Total Amount</span>
-                <span>₹{flight.fare.toLocaleString('en-IN')}</span>
+                <span>{formatCurrency(flight.fare, currency)}</span>
               </div>
             </div>
 
@@ -323,11 +325,11 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
               </div>
               <div className="flex justify-between text-slate-400 font-mono tabular-nums">
                 <span>Cancellation Fee</span>
-                <span>₹{flight.fareRestrictions.cancellationFee.toLocaleString('en-IN')}</span>
+                <span>{formatCurrency(flight.fareRestrictions.cancellationFee, currency)}</span>
               </div>
               <div className="flex justify-between text-slate-400 font-mono tabular-nums">
                 <span>Date Change Fee</span>
-                <span>₹{flight.fareRestrictions.rescheduleFee.toLocaleString('en-IN')} + fare diff</span>
+                <span>{formatCurrency(flight.fareRestrictions.rescheduleFee, currency)} + diff</span>
               </div>
             </div>
 

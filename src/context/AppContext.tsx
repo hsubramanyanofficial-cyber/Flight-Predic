@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../firebase';
 import { FlightOffer, TrackedFlight, InAppNotification, UserPreferences, CabinClass } from '../types';
 import * as api from '../services/api';
+import { SupportedCurrency } from '../utils/currency';
 
 export type NavTab =
   | 'home'
@@ -27,6 +28,8 @@ interface AppContextType {
   isAuthReady: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  currency: SupportedCurrency;
+  setCurrency: (c: SupportedCurrency) => void;
   userPreferences: UserPreferences | null;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
   trackedFlights: TrackedFlight[];
@@ -86,6 +89,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [comparisonList, setComparisonList] = useState<FlightOffer[]>([]);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [currency, setCurrencyState] = useState<SupportedCurrency>(() => {
+    return (localStorage.getItem('fpps_currency') as SupportedCurrency) || 'INR';
+  });
+
+  const setCurrency = (c: SupportedCurrency) => {
+    setCurrencyState(c);
+    try {
+      localStorage.setItem('fpps_currency', c);
+    } catch {}
+  };
 
   const defaultDate = new Date();
   defaultDate.setDate(defaultDate.getDate() + 14);
@@ -337,6 +350,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAuthReady,
         signInWithGoogle,
         logout,
+        currency,
+        setCurrency,
         userPreferences,
         updatePreferences,
         trackedFlights,

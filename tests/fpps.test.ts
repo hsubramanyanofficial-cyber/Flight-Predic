@@ -3,6 +3,7 @@ import { searchAirports, getAirportByCode } from '../src/data/airports.ts';
 import { predictFlightFare, detectIndianFestivalPeak, FPPS_MODEL_METADATA } from '../src/ml/model.ts';
 import { getRouteAnalytics, evaluatePriceIntelligence } from '../src/data/analytics.ts';
 import { generateFlightOffers } from '../src/services/flightEngine.ts';
+import { formatCurrency, convertFromInr } from '../src/utils/currency.ts';
 
 console.log('--- Running FPPS Automated Test Suite ---');
 
@@ -97,6 +98,31 @@ assert.strictEqual(offers[0].currency, 'INR', 'Currency must be INR');
 assert.ok(offers[0].fareRestrictions.baggageCabinKg > 0, 'Baggage allowance should be set');
 console.log('✓ Flight offers engine tests passed.');
 
+// Test 6: Global Expansion & Multi-Currency Engine
+console.log('6. Testing Global Corridors, International Airlines & Multi-Currency...');
+const jfk = getAirportByCode('JFK');
+assert.strictEqual(jfk?.city, 'New York', 'JFK city should be New York');
+assert.strictEqual(jfk?.isDomestic, false, 'JFK should be international');
+
+const lhr = getAirportByCode('LHR');
+assert.strictEqual(lhr?.city, 'London', 'LHR city should be London');
+
+const intlOffers = generateFlightOffers({
+  origin: 'JFK',
+  destination: 'LHR',
+  departureDate: '2026-11-20',
+  passengers: 1,
+  cabinClass: 'economy'
+});
+assert.ok(intlOffers.length >= 8, 'Should generate international scheduled offers');
+assert.ok(intlOffers.some(o => ['EK', 'BA', 'SQ', 'LH', 'QR', 'UA', 'DL'].includes(o.airlineCode)), 'International routes should feature global carriers');
+
+const convertedUsd = convertFromInr(86200, 'USD');
+assert.ok(convertedUsd > 950 && convertedUsd < 1050, '₹86,200 should convert to approx $1,000 USD');
+const formattedUsd = formatCurrency(86200, 'USD');
+assert.ok(formattedUsd.startsWith('$'), 'USD format should start with $');
+console.log('✓ Global expansion & currency tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (5/5)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (6/6)');
 console.log('=============================================\n');

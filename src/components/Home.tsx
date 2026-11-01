@@ -1,10 +1,11 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { AirportInput } from './AirportInput';
-import { ArrowRight, ArrowLeftRight, TrendingDown, Sparkles, Activity, ShieldCheck, Search } from 'lucide-react';
+import { formatCurrency } from '../utils/currency';
+import { ArrowRight, ArrowLeftRight, TrendingDown, Sparkles, Activity, ShieldCheck, Search, Globe } from 'lucide-react';
 
 export const Home: React.FC = () => {
-  const { setActiveTab, searchParams, setSearchParams } = useApp();
+  const { setActiveTab, searchParams, setSearchParams, currency } = useApp();
 
   const handleSwapAirports = () => {
     setSearchParams(prev => ({
@@ -21,6 +22,17 @@ export const Home: React.FC = () => {
 
   const popularCorridors = [
     {
+      origin: 'JFK',
+      destination: 'LHR',
+      originCity: 'New York',
+      destinationCity: 'London',
+      image: '/src/assets/images/hero_aircraft_sky_1793549856138.jpg',
+      avgFare: 42000,
+      lowestSeen: 34500,
+      typicalWindow: '28-60 days out',
+      dealIndex: 'Transatlantic'
+    },
+    {
       origin: 'DEL',
       destination: 'BOM',
       originCity: 'New Delhi',
@@ -29,29 +41,18 @@ export const Home: React.FC = () => {
       avgFare: 4950,
       lowestSeen: 4100,
       typicalWindow: '21-35 days out',
-      dealIndex: 'Relatively Low'
+      dealIndex: 'Prime Domestic'
     },
     {
-      origin: 'BOM',
-      destination: 'BLR',
-      originCity: 'Mumbai',
-      destinationCity: 'Bengaluru',
+      origin: 'LHR',
+      destination: 'DXB',
+      originCity: 'London',
+      destinationCity: 'Dubai',
       image: '/src/assets/images/bengaluru_airport_vista_1793549857175.jpg',
-      avgFare: 3950,
-      lowestSeen: 3200,
-      typicalWindow: '14-28 days out',
-      dealIndex: 'Near Typical'
-    },
-    {
-      origin: 'DEL',
-      destination: 'GOI',
-      originCity: 'New Delhi',
-      destinationCity: 'Goa',
-      image: '/src/assets/images/goa_coastal_flight_1793549857196.jpg',
-      avgFare: 5900,
-      lowestSeen: 4650,
-      typicalWindow: '28-45 days out',
-      dealIndex: 'High Demand'
+      avgFare: 38000,
+      lowestSeen: 31200,
+      typicalWindow: '25-45 days out',
+      dealIndex: 'Middle East Hub'
     }
   ];
 
@@ -85,10 +86,10 @@ export const Home: React.FC = () => {
           
           <div className="space-y-4 text-center max-w-3xl mx-auto">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-              Intelligent Airfare Intelligence for Indian Travellers
+              Predictive Airfare Intelligence for Global Travellers
             </h1>
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto">
-              Combine actual flight offers with calibrated machine-learning price predictions, 30-day corridor analytics, and automated price drop tracking in Indian Rupees (₹).
+              Combine actual flight offers with calibrated machine-learning price predictions, 30-day corridor analytics, and automated price drop tracking across worldwide currencies.
             </p>
           </div>
 
@@ -197,8 +198,9 @@ export const Home: React.FC = () => {
       <section className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              High-Frequency Indian Air Corridors
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <Globe className="h-5 w-5 text-sky-400" />
+              <span>High-Frequency Global Air Corridors</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Live fare intelligence, 30-day benchmark ranges, and historical booking sweet spots.
@@ -208,7 +210,7 @@ export const Home: React.FC = () => {
             onClick={() => setActiveTab('analytics')}
             className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
           >
-            <span>Explore All 24 Corridors</span>
+            <span>Explore All Corridors</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -242,12 +244,12 @@ export const Home: React.FC = () => {
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-mono tabular-nums">
                   <span>30-Day Median</span>
-                  <span className="text-white font-semibold">₹{c.avgFare.toLocaleString('en-IN')}</span>
+                  <span className="text-white font-semibold">{formatCurrency(c.avgFare, currency)}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-400 font-mono tabular-nums">
                   <span>Recent Low</span>
-                  <span className="text-emerald-400 font-semibold">₹{c.lowestSeen.toLocaleString('en-IN')}</span>
+                  <span className="text-emerald-400 font-semibold">{formatCurrency(c.lowestSeen, currency)}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-400">

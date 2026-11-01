@@ -7,9 +7,10 @@ import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { Activity, Calendar, ArrowRight, ShieldCheck, Database, Info, Filter, Download } from 'lucide-react';
+import { formatCurrency } from '../utils/currency';
 
 export const FareAnalytics: React.FC = () => {
-  const { searchParams, setActiveTab } = useApp();
+  const { searchParams, setActiveTab, currency } = useApp();
 
   const [origin, setOrigin] = useState(searchParams.origin || 'DEL');
   const [destination, setDestination] = useState(searchParams.destination || 'BOM');
@@ -180,7 +181,7 @@ export const FareAnalytics: React.FC = () => {
             <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/80">
               <span className="text-xs text-slate-400">30-Day Median Airfare</span>
               <div className="text-2xl font-bold font-mono text-sky-400 mt-1 tabular-nums">
-                ₹{analytics.overallMeanFare.toLocaleString('en-IN')}
+                {formatCurrency(analytics.overallMeanFare, currency)}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Economy non-stop benchmark</p>
             </div>
@@ -188,7 +189,7 @@ export const FareAnalytics: React.FC = () => {
             <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/80">
               <span className="text-xs text-slate-400">Recorded Lowest Fare</span>
               <div className="text-2xl font-bold font-mono text-emerald-400 mt-1 tabular-nums">
-                ₹{analytics.overallMinFare.toLocaleString('en-IN')}
+                {formatCurrency(analytics.overallMinFare, currency)}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Observed promotion bucket</p>
             </div>
@@ -196,7 +197,7 @@ export const FareAnalytics: React.FC = () => {
             <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/80">
               <span className="text-xs text-slate-400">Observed Peak Surge</span>
               <div className="text-2xl font-bold font-mono text-rose-400 mt-1 tabular-nums">
-                ₹{analytics.overallMaxFare.toLocaleString('en-IN')}
+                {formatCurrency(analytics.overallMaxFare, currency)}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Emergency 24hr window</p>
             </div>
@@ -215,7 +216,7 @@ export const FareAnalytics: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-slate-400">Currency: INR (₹)</span>
+                <span className="text-xs font-mono text-slate-400">Currency: {currency}</span>
                 <button
                   onClick={handleDownloadCSV}
                   disabled={!analytics || loading}
@@ -245,12 +246,12 @@ export const FareAnalytics: React.FC = () => {
                   />
                   <YAxis
                     tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }}
-                    tickFormatter={(val: number) => `₹${val}`}
+                    tickFormatter={(val: number) => formatCurrency(val, currency, { compact: true })}
                     domain={['dataMin - 500', 'dataMax + 500']}
                   />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                    formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Fare']}
+                    formatter={(val: any) => [formatCurrency(Number(val), currency), 'Fare']}
                   />
                   <Area type="monotone" dataKey="avgFare" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#fareGrad)" name="Average Fare" />
                   <Line type="monotone" dataKey="minFare" stroke="#34d399" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Min Fare" />
@@ -280,11 +281,11 @@ export const FareAnalytics: React.FC = () => {
                     <XAxis dataKey="airlineName" tick={{ fill: '#94a3b8', fontSize: 11 }} />
                     <YAxis
                       tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }}
-                      tickFormatter={(val: number) => `₹${val}`}
+                      tickFormatter={(val: number) => formatCurrency(val, currency, { compact: true })}
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                      formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Avg Fare']}
+                      formatter={(val: any) => [formatCurrency(Number(val), currency), 'Avg Fare']}
                     />
                     <Bar dataKey="avgFare" fill="#0284c7" radius={[4, 4, 0, 0]} name="Average Fare" />
                   </BarChart>
