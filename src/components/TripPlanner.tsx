@@ -339,11 +339,11 @@ export const TripPlanner: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="grid grid-cols-1 sm:flex items-center gap-2.5 w-full lg:w-auto shrink-0">
           <button
             onClick={handleExportToCalendar}
             disabled={!activeTrip || activeTrip.legs.length === 0}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-semibold transition disabled:opacity-40 disabled:pointer-events-none shadow-sm cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-semibold transition disabled:opacity-40 disabled:pointer-events-none shadow-sm cursor-pointer whitespace-nowrap"
             title="Export organized flight segments to an .ics calendar file for Apple Calendar, Google Calendar, Outlook, etc."
           >
             {exportedIcs ? (
@@ -361,7 +361,7 @@ export const TripPlanner: React.FC = () => {
 
           <button
             onClick={copyToClipboard}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900/80 hover:bg-slate-850 text-slate-200 text-xs font-medium transition"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-850 text-slate-200 text-xs font-medium transition whitespace-nowrap"
             title="Copy formatted itinerary summary"
           >
             {copiedSummary ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-slate-400" />}
