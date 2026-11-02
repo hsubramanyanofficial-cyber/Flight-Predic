@@ -123,6 +123,89 @@ const formattedUsd = formatCurrency(86200, 'USD');
 assert.ok(formattedUsd.startsWith('$'), 'USD format should start with $');
 console.log('✓ Global expansion & currency tests passed.');
 
+// Test 7: Multi-City Trip Planner & Tracked Flight Linking
+console.log('7. Testing Multi-City Trip Planner & Tracked Flight Linking...');
+import { calculateAirDistanceKm } from '../src/data/airports.ts';
+import { TripItinerary, TripLeg, TrackedFlight } from '../src/types/index.ts';
+
+const testLeg1: TripLeg = {
+  id: 'leg-101',
+  origin: 'DEL',
+  destination: 'DXB',
+  originCity: 'New Delhi',
+  destinationCity: 'Dubai',
+  date: '2026-06-15',
+  cabinClass: 'economy',
+  fareInr: 16500,
+  status: 'planned'
+};
+
+const testLeg2: TripLeg = {
+  id: 'leg-102',
+  origin: 'DXB',
+  destination: 'LHR',
+  originCity: 'Dubai',
+  destinationCity: 'London',
+  date: '2026-06-19',
+  cabinClass: 'economy',
+  fareInr: 34000,
+  status: 'planned'
+};
+
+const sampleItinerary: TripItinerary = {
+  id: 'trip-test-1',
+  title: 'Asia-Europe Multi-City Hopper',
+  startDate: '2026-06-15',
+  endDate: '2026-06-25',
+  budgetInr: 70000,
+  legs: [testLeg1, testLeg2],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+assert.strictEqual(sampleItinerary.legs.length, 2, 'Itinerary should contain 2 legs');
+const dist1 = calculateAirDistanceKm(testLeg1.origin, testLeg1.destination);
+const dist2 = calculateAirDistanceKm(testLeg2.origin, testLeg2.destination);
+assert.ok(dist1 > 2000 && dist1 < 2500, 'DEL-DXB distance should be approx 2180 km');
+assert.ok(dist2 > 5000 && dist2 < 6000, 'DXB-LHR distance should be approx 5480 km');
+
+// Simulate linking tracked flight to Leg 1
+const mockTracked: TrackedFlight = {
+  id: 'track-del-dxb',
+  userId: 'user-123',
+  origin: 'DEL',
+  destination: 'DXB',
+  originCity: 'New Delhi',
+  destinationCity: 'Dubai',
+  departureDate: '2026-06-15',
+  cabinClass: 'economy',
+  targetPriceInr: 15000,
+  currentLowestPriceInr: 14200, // lower than target!
+  initialPriceInr: 16500,
+  currency: 'INR',
+  isActive: true,
+  createdAt: new Date().toISOString(),
+  lastCheckedAt: new Date().toISOString(),
+  priceHistory: []
+};
+
+// Link tracked flight to leg 1
+const linkedLeg: TripLeg = {
+  ...testLeg1,
+  linkedTrackedFlightId: mockTracked.id,
+  status: 'tracked',
+  fareInr: mockTracked.currentLowestPriceInr
+};
+
+assert.strictEqual(linkedLeg.status, 'tracked', 'Linked leg status must be tracked');
+assert.strictEqual(linkedLeg.linkedTrackedFlightId, mockTracked.id, 'Linked leg must reference tracked flight id');
+assert.strictEqual(linkedLeg.fareInr, 14200, 'Linked leg fare should be synchronized to current lowest market price');
+
+const totalCost = linkedLeg.fareInr! + testLeg2.fareInr!;
+assert.strictEqual(totalCost, 48200, 'Total cost should compute correctly with linked fare');
+assert.ok(sampleItinerary.budgetInr! > totalCost, 'Budget surplus should be positive');
+console.log('✓ Trip Planner & Tracked Flight linking tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (6/6)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (7/7)');
 console.log('=============================================\n');

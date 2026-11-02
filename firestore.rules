@@ -58,6 +58,16 @@ service cloud.firestore {
         data.read is bool;
     }
 
+    // Trip Itinerary Validation Helper
+    function isValidTrip(data) {
+      return data.keys().hasAll(['id', 'title', 'startDate', 'endDate', 'legs']) &&
+        (!('userId' in data) || data.userId == request.auth.uid) &&
+        data.title is string && data.title.size() <= 150 &&
+        data.startDate is string &&
+        data.endDate is string &&
+        data.legs is list;
+    }
+
     // Match /users/{userId}
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -79,6 +89,14 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming());
         allow update: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming()) && incoming().userId == existing().userId;
         allow delete: if isOwner(userId) && isValidId(notificationId);
+      }
+
+      // Sub-collection /users/{userId}/trips/{tripId}
+      match /trips/{tripId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(tripId) && isValidTrip(incoming());
+        allow update: if isOwner(userId) && isValidId(tripId) && isValidTrip(incoming());
+        allow delete: if isOwner(userId) && isValidId(tripId);
       }
     }
   }

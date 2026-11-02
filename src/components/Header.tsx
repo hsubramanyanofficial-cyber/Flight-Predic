@@ -52,6 +52,7 @@ export const Header: React.FC = () => {
   const navLinks: { tab: NavTab; label: string }[] = [
     { tab: 'home', label: 'Home' },
     { tab: 'search', label: 'Search' },
+    { tab: 'trips', label: 'Trip Planner' },
     { tab: 'predictions', label: 'Predictions' },
     { tab: 'analytics', label: 'Fare Analytics' },
     { tab: 'tracked', label: 'Price Alerts' },

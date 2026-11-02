@@ -201,3 +201,34 @@ export interface RecommendationOffer {
   priceIntelligence: PriceIntelligence;
   prediction?: PricePrediction;
 }
+
+export interface TripLeg {
+  id: string;
+  origin: string;
+  destination: string;
+  originCity: string;
+  destinationCity: string;
+  date: string; // YYYY-MM-DD
+  flightNumber?: string;
+  airlineName?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  cabinClass: CabinClass;
+  linkedTrackedFlightId?: string;
+  fareInr?: number;
+  notes?: string;
+  status: 'planned' | 'tracked' | 'booked';
+}
+
+export interface TripItinerary {
+  id: string;
+  userId?: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  budgetInr?: number;
+  legs: TripLeg[];
+  createdAt: string;
+  updatedAt: string;
+}

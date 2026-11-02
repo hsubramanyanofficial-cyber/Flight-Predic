@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../firebase';
-import { FlightOffer, TrackedFlight, InAppNotification, UserPreferences, CabinClass } from '../types';
+import { FlightOffer, TrackedFlight, InAppNotification, UserPreferences, CabinClass, TripItinerary, TripLeg } from '../types';
 import * as api from '../services/api';
 import { SupportedCurrency } from '../utils/currency';
 
@@ -10,6 +10,7 @@ export type NavTab =
   | 'home'
   | 'search'
   | 'compare'
+  | 'trips'
   | 'predictions'
   | 'analytics'
   | 'tracked'
@@ -74,11 +75,82 @@ interface AppContextType {
     passengers: number;
     cabinClass: CabinClass;
   }>>;
+  trips: TripItinerary[];
+  createTrip: (tripData: Omit<TripItinerary, 'id' | 'createdAt' | 'updatedAt'>) => Promise<TripItinerary>;
+  updateTrip: (id: string, updates: Partial<TripItinerary>) => Promise<void>;
+  deleteTrip: (id: string) => Promise<void>;
+  addLegToTrip: (tripId: string, leg: Omit<TripLeg, 'id'>) => Promise<void>;
+  removeLegFromTrip: (tripId: string, legId: string) => Promise<void>;
+  linkTrackedFlightToLeg: (tripId: string, legId: string, trackedFlightId: string) => Promise<void>;
+  unlinkTrackedFlightFromLeg: (tripId: string, legId: string) => Promise<void>;
   notificationDrawerOpen: boolean;
   setNotificationDrawerOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const DEFAULT_SAMPLE_TRIPS: TripItinerary[] = [
+  {
+    id: 'trip-asia-europe-2026',
+    title: 'Global Horizons: Delhi → Dubai → London → Mumbai',
+    description: 'Multi-city business and leisure journey connecting premier global hubs.',
+    startDate: '2026-06-15',
+    endDate: '2026-06-28',
+    budgetInr: 185000,
+    legs: [
+      {
+        id: 'leg-1',
+        origin: 'DEL',
+        destination: 'DXB',
+        originCity: 'New Delhi',
+        destinationCity: 'Dubai',
+        date: '2026-06-15',
+        flightNumber: 'EK-511',
+        airlineName: 'Emirates',
+        departureTime: '10:45',
+        arrivalTime: '13:10',
+        cabinClass: 'economy',
+        fareInr: 16800,
+        notes: 'Morning nonstop departure from Terminal 3.',
+        status: 'planned'
+      },
+      {
+        id: 'leg-2',
+        origin: 'DXB',
+        destination: 'LHR',
+        originCity: 'Dubai',
+        destinationCity: 'London',
+        date: '2026-06-19',
+        flightNumber: 'BA-108',
+        airlineName: 'British Airways',
+        departureTime: '14:20',
+        arrivalTime: '18:55',
+        cabinClass: 'economy',
+        fareInr: 34500,
+        notes: '4 days in Dubai, proceeding to London Heathrow.',
+        status: 'planned'
+      },
+      {
+        id: 'leg-3',
+        origin: 'LHR',
+        destination: 'BOM',
+        originCity: 'London',
+        destinationCity: 'Mumbai',
+        date: '2026-06-28',
+        flightNumber: 'AI-130',
+        airlineName: 'Air India',
+        departureTime: '13:00',
+        arrivalTime: '02:45',
+        cabinClass: 'economy',
+        fareInr: 42000,
+        notes: 'Direct return leg from London to Mumbai.',
+        status: 'planned'
+      }
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
@@ -89,6 +161,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [comparisonList, setComparisonList] = useState<FlightOffer[]>([]);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [trips, setTrips] = useState<TripItinerary[]>(() => {
+    try {
+      const stored = localStorage.getItem('fpps_trips');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_SAMPLE_TRIPS;
+  });
+
+  const saveTripsToStorage = (updatedTrips: TripItinerary[]) => {
+    setTrips(updatedTrips);
+    try {
+      localStorage.setItem('fpps_trips', JSON.stringify(updatedTrips));
+    } catch {}
+  };
+
   const [currency, setCurrencyState] = useState<SupportedCurrency>(() => {
     return (localStorage.getItem('fpps_currency') as SupportedCurrency) || 'INR';
   });
@@ -175,9 +265,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notifications`);
         });
 
+        // Attach real-time snapshot listener for trips
+        const tripsColRef = collection(db, 'users', user.uid, 'trips');
+        const unsubTrips = onSnapshot(tripsColRef, (snapshot) => {
+          const tripList: TripItinerary[] = [];
+          snapshot.forEach(docSnap => {
+            tripList.push(docSnap.data() as TripItinerary);
+          });
+          if (tripList.length > 0) {
+            setTrips(tripList);
+          }
+        }, (err) => {
+          handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/trips`);
+        });
+
         return () => {
           unsubTracked();
           unsubNotifs();
+          unsubTrips();
         };
       } else {
         // User logged out: load local default persistence
@@ -339,6 +444,193 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return comparisonList.some(f => f.id === flightId);
   };
 
+  const createTrip = async (tripData: Omit<TripItinerary, 'id' | 'createdAt' | 'updatedAt'>): Promise<TripItinerary> => {
+    const newTrip: TripItinerary = {
+      ...tripData,
+      id: `trip-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      userId: currentUser?.uid,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const nextTrips = [newTrip, ...trips];
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      try {
+        const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', newTrip.id);
+        await setDoc(tripDocRef, newTrip);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `users/${currentUser.uid}/trips/${newTrip.id}`);
+      }
+    }
+    return newTrip;
+  };
+
+  const updateTrip = async (id: string, updates: Partial<TripItinerary>) => {
+    const nextTrips = trips.map(t => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      try {
+        const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', id);
+        await setDoc(tripDocRef, { ...updates, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${currentUser.uid}/trips/${id}`);
+      }
+    }
+  };
+
+  const deleteTrip = async (id: string) => {
+    const nextTrips = trips.filter(t => t.id !== id);
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      try {
+        const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', id);
+        await deleteDoc(tripDocRef);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `users/${currentUser.uid}/trips/${id}`);
+      }
+    }
+  };
+
+  const addLegToTrip = async (tripId: string, legData: Omit<TripLeg, 'id'>) => {
+    const newLeg: TripLeg = {
+      ...legData,
+      id: `leg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`
+    };
+
+    const nextTrips = trips.map(trip => {
+      if (trip.id === tripId) {
+        const updatedLegs = [...trip.legs, newLeg].sort((a, b) => a.date.localeCompare(b.date));
+        return {
+          ...trip,
+          legs: updatedLegs,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return trip;
+    });
+
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      const targetTrip = nextTrips.find(t => t.id === tripId);
+      if (targetTrip) {
+        try {
+          const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', tripId);
+          await setDoc(tripDocRef, targetTrip, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${currentUser.uid}/trips/${tripId}`);
+        }
+      }
+    }
+  };
+
+  const removeLegFromTrip = async (tripId: string, legId: string) => {
+    const nextTrips = trips.map(trip => {
+      if (trip.id === tripId) {
+        return {
+          ...trip,
+          legs: trip.legs.filter(l => l.id !== legId),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return trip;
+    });
+
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      const targetTrip = nextTrips.find(t => t.id === tripId);
+      if (targetTrip) {
+        try {
+          const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', tripId);
+          await setDoc(tripDocRef, targetTrip, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${currentUser.uid}/trips/${tripId}`);
+        }
+      }
+    }
+  };
+
+  const linkTrackedFlightToLeg = async (tripId: string, legId: string, trackedFlightId: string) => {
+    const matchedTracked = trackedFlights.find(tf => tf.id === trackedFlightId);
+    const nextTrips = trips.map(trip => {
+      if (trip.id === tripId) {
+        const updatedLegs = trip.legs.map(leg => {
+          if (leg.id === legId) {
+            return {
+              ...leg,
+              linkedTrackedFlightId: trackedFlightId,
+              status: 'tracked' as const,
+              fareInr: matchedTracked ? matchedTracked.currentLowestPriceInr : leg.fareInr
+            };
+          }
+          return leg;
+        });
+        return {
+          ...trip,
+          legs: updatedLegs,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return trip;
+    });
+
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      const targetTrip = nextTrips.find(t => t.id === tripId);
+      if (targetTrip) {
+        try {
+          const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', tripId);
+          await setDoc(tripDocRef, targetTrip, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${currentUser.uid}/trips/${tripId}`);
+        }
+      }
+    }
+  };
+
+  const unlinkTrackedFlightFromLeg = async (tripId: string, legId: string) => {
+    const nextTrips = trips.map(trip => {
+      if (trip.id === tripId) {
+        const updatedLegs = trip.legs.map(leg => {
+          if (leg.id === legId) {
+            const { linkedTrackedFlightId, ...rest } = leg;
+            return {
+              ...rest,
+              status: 'planned' as const
+            };
+          }
+          return leg;
+        });
+        return {
+          ...trip,
+          legs: updatedLegs,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return trip;
+    });
+
+    saveTripsToStorage(nextTrips);
+
+    if (currentUser) {
+      const targetTrip = nextTrips.find(t => t.id === tripId);
+      if (targetTrip) {
+        try {
+          const tripDocRef = doc(db, 'users', currentUser.uid, 'trips', tripId);
+          await setDoc(tripDocRef, targetTrip, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${currentUser.uid}/trips/${tripId}`);
+        }
+      }
+    }
+  };
+
   const unreadNotifsCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -369,6 +661,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeFromComparison,
         clearComparison,
         isFlightInComparison,
+        trips,
+        createTrip,
+        updateTrip,
+        deleteTrip,
+        addLegToTrip,
+        removeLegFromTrip,
+        linkTrackedFlightToLeg,
+        unlinkTrackedFlightFromLeg,
         searchParams,
         setSearchParams,
         notificationDrawerOpen,

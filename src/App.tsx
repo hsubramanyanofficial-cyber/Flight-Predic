@@ -10,6 +10,7 @@ import { NotificationDrawer } from './components/NotificationDrawer';
 import { Home } from './components/Home';
 import { SearchFlights } from './components/SearchFlights';
 import { FlightComparison } from './components/FlightComparison';
+import { TripPlanner } from './components/TripPlanner';
 import { PricePredictions } from './components/PricePredictions';
 import { FareAnalytics } from './components/FareAnalytics';
 import { TrackedFlights } from './components/TrackedFlights';
@@ -33,6 +34,8 @@ const AppContent: React.FC = () => {
         return <SearchFlights />;
       case 'compare':
         return <FlightComparison />;
+      case 'trips':
+        return <TripPlanner />;
       case 'predictions':
         return <PricePredictions />;
       case 'analytics':
@@ -85,6 +88,7 @@ const AppContent: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-6 text-slate-400">
             <button onClick={() => setActiveTab('search')} className="hover:text-white transition">Search</button>
+            <button onClick={() => setActiveTab('trips')} className="hover:text-white transition">Trip Planner</button>
             <button onClick={() => setActiveTab('predictions')} className="hover:text-white transition">ML Predictions</button>
             <button onClick={() => setActiveTab('analytics')} className="hover:text-white transition">Fare Analytics</button>
             <button onClick={() => setActiveTab('tracked')} className="hover:text-white transition">Price Alerts</button>
