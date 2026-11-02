@@ -12,7 +12,8 @@ import {
   LogIn,
   LogOut,
   User as UserIcon,
-  Globe
+  Globe,
+  Gamepad2
 } from 'lucide-react';
 import { CURRENCIES, SupportedCurrency } from '../utils/currency';
 
@@ -175,6 +176,20 @@ export const Header: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* 3D Skyway Flight Game & Showcase CTA */}
+          <button
+            onClick={() => setActiveTab('game')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition border ${
+              activeTab === 'game'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 shadow-sm'
+            }`}
+            title="Launch 3D Skyway flight simulator & aircraft showcase"
+          >
+            <Gamepad2 className="h-3.5 w-3.5 text-amber-400" />
+            <span>3D Skyway</span>
+          </button>
         </nav>
 
         {/* Zone 3: Actions (Currency, Compare, Notifications, Auth / Profile) */}
@@ -322,6 +337,17 @@ export const Header: React.FC = () => {
 
       {/* Mobile nav strip with horizontal scroll */}
       <div className="flex lg:hidden overflow-x-auto border-t border-slate-800/80 px-4 py-2 gap-3 text-xs font-medium scrollbar-none">
+        <button
+          onClick={() => setActiveTab('game')}
+          className={`whitespace-nowrap px-2.5 py-1 rounded flex items-center gap-1.5 transition border ${
+            activeTab === 'game'
+              ? 'bg-amber-500/25 text-amber-300 font-bold border-amber-500/50'
+              : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+          }`}
+        >
+          <Gamepad2 className="h-3.5 w-3.5 text-amber-400" />
+          <span>3D Skyway</span>
+        </button>
         {navLinks.map(({ tab, label }) => (
           <button
             key={tab}

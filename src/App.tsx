@@ -21,10 +21,16 @@ import { LiveVoiceAssistant } from './components/LiveVoiceAssistant';
 import { AirportGrounding } from './components/AirportGrounding';
 import { VideoGeneration } from './components/VideoGeneration';
 import { AudioTranscription } from './components/AudioTranscription';
+import { FlightGame } from './components/FlightGame';
 import { Plane, ShieldCheck, Sparkles } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
+
+  // Full-viewport Game Shell: never render website navbars or footers when active
+  if (activeTab === 'game') {
+    return <FlightGame onExit={() => setActiveTab('home')} />;
+  }
 
   const renderActiveView = () => {
     switch (activeTab) {

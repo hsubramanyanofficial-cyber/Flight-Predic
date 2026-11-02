@@ -11,6 +11,7 @@ export type NavTab =
   | 'search'
   | 'compare'
   | 'trips'
+  | 'game'
   | 'predictions'
   | 'analytics'
   | 'tracked'

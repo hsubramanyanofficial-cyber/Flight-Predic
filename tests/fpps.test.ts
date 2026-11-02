@@ -206,6 +206,35 @@ assert.strictEqual(totalCost, 48200, 'Total cost should compute correctly with l
 assert.ok(sampleItinerary.budgetInr! > totalCost, 'Budget surplus should be positive');
 console.log('✓ Trip Planner & Tracked Flight linking tests passed.');
 
+// Test 8: Three.js 3D Scene Configs, Liveries & Audio Synthesizer
+console.log('8. Testing Three.js 3D Aircraft Model, Liveries & Procedural Audio...');
+import { LIVERY_CONFIGS, AirlineLivery } from '../src/game/aircraftModel.ts';
+import { DEFAULT_WORLD_CONFIG, checkIsSoftwareGl } from '../src/game/worldScene.ts';
+import { flightAudio } from '../src/game/audioEngine.ts';
+
+const expectedLiveries: AirlineLivery[] = ['indigo', 'airindia', 'emirates', 'british', 'singapore'];
+expectedLiveries.forEach(l => {
+  assert.ok(LIVERY_CONFIGS[l], `Livery ${l} configuration should exist`);
+  assert.ok(typeof LIVERY_CONFIGS[l].primaryColor === 'number', `Livery ${l} primaryColor must be number hex`);
+  assert.ok(typeof LIVERY_CONFIGS[l].accentColor === 'number', `Livery ${l} accentColor must be number hex`);
+  assert.ok(typeof LIVERY_CONFIGS[l].metalColor === 'number', `Livery ${l} metalColor must be number hex`);
+});
+
+assert.strictEqual(DEFAULT_WORLD_CONFIG.corridorLength, 3500, 'Flight corridor length should be 3500m');
+assert.ok(DEFAULT_WORLD_CONFIG.corridorWidth >= 300, 'Flight corridor width should accommodate flight maneuvers');
+
+// Test Software-WebGL detection
+const isSoft = checkIsSoftwareGl();
+assert.ok(typeof isSoft === 'boolean', 'Software WebGL check should return boolean');
+
+// Test Procedural Flight Audio Engine
+assert.strictEqual(flightAudio.getMuted(), false, 'Flight audio should start unmuted');
+flightAudio.setMuted(true);
+assert.strictEqual(flightAudio.getMuted(), true, 'Mute should be true after setMuted(true)');
+flightAudio.toggleMute();
+assert.strictEqual(flightAudio.getMuted(), false, 'toggleMute should toggle back to unmuted');
+console.log('✓ Three.js 3D model, liveries & flight audio tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (7/7)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (8/8)');
 console.log('=============================================\n');
