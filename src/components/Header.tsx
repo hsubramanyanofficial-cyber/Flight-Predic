@@ -119,8 +119,8 @@ export const Header: React.FC = () => {
           </button>
         </div>
 
-        {/* Zone 2: Concise single-line nav links + AI Features dropdown */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
+        {/* Zone 2: Concise single-line nav links + AI Features dropdown (Visible on XL+ screens, mobile drawer on laptop/mobile) */}
+        <nav className="hidden xl:flex items-center gap-5 text-sm font-medium">
           {navLinks.map(({ tab, label }) => {
             const isActive = activeTab === tab;
             return (
@@ -342,7 +342,7 @@ export const Header: React.FC = () => {
           {/* Mobile Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white transition cursor-pointer"
+            className="xl:hidden flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white transition cursor-pointer"
             aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
           >
             {mobileMenuOpen ? <X className="h-4 w-4 text-rose-400" /> : <Menu className="h-4 w-4 text-sky-400" />}
@@ -353,7 +353,7 @@ export const Header: React.FC = () => {
 
       {/* Full-Featured Responsive Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-800 bg-slate-950/98 backdrop-blur-2xl px-5 py-6 space-y-6 max-h-[calc(100vh-64px)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+        <div className="xl:hidden border-t border-slate-800 bg-slate-950/98 backdrop-blur-2xl px-5 py-6 space-y-6 max-h-[calc(100vh-64px)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
           {/* Quick 3D Flight Experience CTA */}
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-sky-500/10 to-transparent border border-amber-500/30 flex items-center justify-between">
             <div>
