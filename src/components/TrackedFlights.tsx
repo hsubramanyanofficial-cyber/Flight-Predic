@@ -81,7 +81,7 @@ export const TrackedFlights: React.FC = () => {
             Tracked Itineraries & Price Targets
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Continuous background monitoring across Indian domestic routes. Get alerted when prices hit your threshold.
+            Continuous background monitoring across global domestic and international flight corridors. Get alerted when prices hit your threshold.
           </p>
         </div>
 

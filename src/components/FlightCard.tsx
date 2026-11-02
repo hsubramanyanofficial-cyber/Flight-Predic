@@ -125,23 +125,23 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
       <div className="p-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         
         {/* Timeline block (8 cols) */}
-        <div className="lg:col-span-8 grid grid-cols-7 items-center gap-2">
+        <div className="lg:col-span-8 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Origin & Departure */}
-          <div className="col-span-2 text-left">
-            <div className="text-2xl font-bold font-mono text-white tabular-nums tracking-tight">
+          <div className="text-left shrink-0 min-w-[70px]">
+            <div className="text-xl sm:text-2xl font-black font-mono text-white tabular-nums tracking-tight">
               {depTimeStr}
             </div>
-            <div className="text-xs font-semibold text-sky-400 font-mono mt-0.5">
+            <div className="text-xs font-bold text-sky-400 font-mono mt-0.5">
               {flight.origin}
             </div>
-            <div className="text-[11px] text-slate-400 truncate">
+            <div className="text-[11px] text-slate-400 truncate max-w-[100px] sm:max-w-none">
               {flight.originCity}
             </div>
           </div>
 
           {/* Duration & Stops Graphic */}
-          <div className="col-span-3 text-center px-2">
+          <div className="flex-1 text-center px-2">
             <div className="text-xs font-mono text-slate-400 flex items-center justify-center gap-1 mb-1">
               <Clock className="h-3 w-3 text-slate-500" />
               <span>{durationHours}h {durationMins}m</span>
@@ -149,7 +149,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
             <div className="relative flex items-center justify-center my-1">
               <div className="w-full h-[2px] bg-slate-700 relative">
                 {flight.stops > 0 && (
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-slate-900" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900" />
                 )}
               </div>
             </div>
@@ -165,14 +165,14 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
           </div>
 
           {/* Destination & Arrival */}
-          <div className="col-span-2 text-right">
-            <div className="text-2xl font-bold font-mono text-white tabular-nums tracking-tight">
+          <div className="text-right shrink-0 min-w-[70px]">
+            <div className="text-xl sm:text-2xl font-black font-mono text-white tabular-nums tracking-tight">
               {arrTimeStr}
             </div>
-            <div className="text-xs font-semibold text-sky-400 font-mono mt-0.5">
+            <div className="text-xs font-bold text-sky-400 font-mono mt-0.5">
               {flight.destination}
             </div>
-            <div className="text-[11px] text-slate-400 truncate">
+            <div className="text-[11px] text-slate-400 truncate max-w-[100px] sm:max-w-none">
               {flight.destinationCity}
             </div>
           </div>

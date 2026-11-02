@@ -82,8 +82,8 @@ export const FlightComparison: React.FC = () => {
       />
 
       {/* Comparison Grid */}
-      <div className="overflow-x-auto">
-        <div className={`grid grid-cols-1 md:grid-cols-${Math.min(comparisonList.length, 3)} gap-4 min-w-[700px]`}>
+      <div className="w-full">
+        <div className={`grid grid-cols-1 ${comparisonList.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 sm:gap-6`}>
           {comparisonList.map(flight => {
             const dep = new Date(flight.departureTime);
             const arr = new Date(flight.arrivalTime);

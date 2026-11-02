@@ -181,10 +181,10 @@ export const SearchFlights: React.FC = () => {
             <button
               onClick={executeSearch}
               disabled={loading}
-              className="w-full p-3 rounded-lg bg-sky-400 text-slate-950 font-semibold text-xs hover:bg-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm"
+              className="w-full h-11 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 cursor-pointer"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span>{loading ? 'Searching...' : 'Search Offers'}</span>
             </button>
           </div>
 

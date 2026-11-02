@@ -57,7 +57,7 @@ export const PricePredictions: React.FC = () => {
           Predict Future Flight Fares & Factor Decomposition
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
-          Simulate airfares under varying booking windows, seasonal peaks, and itinerary conditions. Our model extracts dynamic pricing signals calibrated from 124,500 historical Indian domestic flight observations.
+          Simulate airfares under varying booking windows, seasonal peaks, and itinerary conditions. Our model extracts dynamic pricing signals calibrated from over 124,500 historical global and domestic flight observations across primary airline corridors.
         </p>
       </div>
 
@@ -128,6 +128,9 @@ export const PricePredictions: React.FC = () => {
                 >
                   <option value="IndiGo">IndiGo (LCC Benchmark)</option>
                   <option value="Air India">Air India (Full Service)</option>
+                  <option value="Emirates">Emirates (Global Flagship)</option>
+                  <option value="British Airways">British Airways (International)</option>
+                  <option value="Singapore Airlines">Singapore Airlines (Global Hub)</option>
                   <option value="Vistara">Vistara (Premium FS)</option>
                   <option value="Akasa Air">Akasa Air (LCC Modern)</option>
                   <option value="SpiceJet">SpiceJet (Budget)</option>

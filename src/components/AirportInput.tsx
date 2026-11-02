@@ -63,7 +63,7 @@ export const AirportInput: React.FC<AirportInputProps> = ({ label, value, onChan
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 w-80 sm:w-96 rounded-lg border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+        <div className="absolute top-full left-0 z-50 mt-1.5 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
           <div className="p-2 border-b border-slate-800 bg-slate-950/60">
             <input
               type="text"

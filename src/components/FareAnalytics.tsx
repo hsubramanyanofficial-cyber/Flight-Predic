@@ -120,28 +120,30 @@ export const FareAnalytics: React.FC = () => {
         </div>
 
         {/* Airport Picker Bar & CSV Export */}
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <div className="w-36 sm:w-44">
-            <AirportInput
-              label="Origin"
-              value={origin}
-              onChange={setOrigin}
-              type="origin"
-            />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+          <div className="grid grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex sm:items-center">
+            <div className="w-full sm:w-40 lg:w-48">
+              <AirportInput
+                label="Origin"
+                value={origin}
+                onChange={setOrigin}
+                type="origin"
+              />
+            </div>
+            <div className="w-full sm:w-40 lg:w-48">
+              <AirportInput
+                label="Destination"
+                value={destination}
+                onChange={setDestination}
+                type="destination"
+              />
+            </div>
           </div>
-          <div className="w-36 sm:w-44">
-            <AirportInput
-              label="Destination"
-              value={destination}
-              onChange={setDestination}
-              type="destination"
-            />
-          </div>
-          <div className="pt-5 w-full sm:w-auto">
+          <div className="sm:pt-5 w-full sm:w-auto">
             <button
               onClick={handleDownloadCSV}
               disabled={!analytics || loading}
-              className={`w-full sm:w-auto px-4 py-3 rounded-lg border text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 ${
+              className={`w-full sm:w-auto px-4 py-3 rounded-xl border text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm whitespace-nowrap shrink-0 ${
                 downloadSuccess
                   ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
                   : 'border-slate-700 bg-slate-800 text-slate-200 hover:text-white hover:border-slate-600'

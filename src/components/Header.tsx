@@ -13,7 +13,13 @@ import {
   LogOut,
   User as UserIcon,
   Globe,
-  Gamepad2
+  Gamepad2,
+  Menu,
+  X,
+  Compass,
+  TrendingUp,
+  Search,
+  Luggage
 } from 'lucide-react';
 import { CURRENCIES, SupportedCurrency } from '../utils/currency';
 
@@ -34,6 +40,7 @@ export const Header: React.FC = () => {
 
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const aiMenuRef = useRef<HTMLDivElement>(null);
   const currencyMenuRef = useRef<HTMLDivElement>(null);
 
@@ -331,77 +338,163 @@ export const Header: React.FC = () => {
               <span>Sign In</span>
             </button>
           )}
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white transition cursor-pointer"
+            aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4 text-rose-400" /> : <Menu className="h-4 w-4 text-sky-400" />}
+          </button>
         </div>
 
       </div>
 
-      {/* Mobile nav strip with horizontal scroll */}
-      <div className="flex lg:hidden overflow-x-auto border-t border-slate-800/80 px-4 py-2 gap-3 text-xs font-medium scrollbar-none">
-        <button
-          onClick={() => setActiveTab('game')}
-          className={`whitespace-nowrap px-2.5 py-1 rounded flex items-center gap-1.5 transition border ${
-            activeTab === 'game'
-              ? 'bg-amber-500/25 text-amber-300 font-bold border-amber-500/50'
-              : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-          }`}
-        >
-          <Gamepad2 className="h-3.5 w-3.5 text-amber-400" />
-          <span>3D Skyway</span>
-        </button>
-        {navLinks.map(({ tab, label }) => (
+      {/* Full-Featured Responsive Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden border-t border-slate-800 bg-slate-950/98 backdrop-blur-2xl px-5 py-6 space-y-6 max-h-[calc(100vh-64px)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+          {/* Quick 3D Flight Experience CTA */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-sky-500/10 to-transparent border border-amber-500/30 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Gamepad2 className="h-4 w-4 text-amber-400" />
+                3D Skyway Ace Simulator
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Procedural flight corridor & airliner liveries</div>
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab('game');
+                setMobileMenuOpen(false);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer"
+            >
+              Play 3D
+            </button>
+          </div>
+
+          {/* Main Airfare Operations */}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Flight Operations & Planning
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {navLinks.map(({ tab, label }) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`p-2.5 rounded-xl border text-left text-xs font-semibold transition ${
+                    activeTab === tab
+                      ? 'bg-sky-500/20 border-sky-500/50 text-sky-300'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Gemini AI & Workspace Intelligence */}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+              AI Concierge & Live Voice
+            </div>
+            <div className="space-y-1.5">
+              {aiTools.map(({ tab, label, desc, icon }) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition ${
+                    activeTab === tab
+                      ? 'bg-sky-500/20 border-sky-500/50 text-white'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="p-1 rounded bg-slate-950 border border-slate-800">
+                    {icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white">{label}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Currency Selector for Mobile */}
+          <div className="pt-2 border-t border-slate-800">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Display Currency
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.values(CURRENCIES).slice(0, 6).map(c => (
+                <button
+                  key={c.code}
+                  onClick={() => {
+                    setCurrency(c.code);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`p-2 rounded-lg border text-center text-xs font-mono transition ${
+                    currency === c.code
+                      ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-bold'
+                      : 'bg-slate-900 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  {c.code} ({c.symbol.trim()})
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile nav strip with horizontal scroll (visible when drawer closed) */}
+      {!mobileMenuOpen && (
+        <div className="flex lg:hidden overflow-x-auto border-t border-slate-800/80 px-4 py-2 gap-2 text-xs font-medium scrollbar-none">
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`whitespace-nowrap px-2 py-1 rounded transition ${
-              activeTab === tab
-                ? 'bg-sky-500/20 text-sky-400 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
+            onClick={() => setActiveTab('game')}
+            className={`whitespace-nowrap px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition border shrink-0 ${
+              activeTab === 'game'
+                ? 'bg-amber-500/25 text-amber-300 font-bold border-amber-500/50'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
             }`}
           >
-            {label}
+            <Gamepad2 className="h-3.5 w-3.5 text-amber-400" />
+            <span>3D Skyway</span>
           </button>
-        ))}
-        <button
-          onClick={() => setActiveTab('chatbot')}
-          className={`whitespace-nowrap px-2 py-1 rounded flex items-center gap-1 transition ${
-            activeTab === 'chatbot' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400'
-          }`}
-        >
-          <Sparkles className="h-3 w-3 text-sky-400" /> AI Concierge
-        </button>
-        <button
-          onClick={() => setActiveTab('voice')}
-          className={`whitespace-nowrap px-2 py-1 rounded transition ${
-            activeTab === 'voice' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400'
-          }`}
-        >
-          Voice
-        </button>
-        <button
-          onClick={() => setActiveTab('maps')}
-          className={`whitespace-nowrap px-2 py-1 rounded transition ${
-            activeTab === 'maps' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400'
-          }`}
-        >
-          Maps
-        </button>
-        <button
-          onClick={() => setActiveTab('video')}
-          className={`whitespace-nowrap px-2 py-1 rounded transition ${
-            activeTab === 'video' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400'
-          }`}
-        >
-          Video
-        </button>
-        <button
-          onClick={() => setActiveTab('transcribe')}
-          className={`whitespace-nowrap px-2 py-1 rounded transition ${
-            activeTab === 'transcribe' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400'
-          }`}
-        >
-          Transcribe
-        </button>
-      </div>
+          {navLinks.map(({ tab, label }) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg transition shrink-0 ${
+                activeTab === tab
+                  ? 'bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            onClick={() => setActiveTab('chatbot')}
+            className={`whitespace-nowrap px-2.5 py-1 rounded-lg flex items-center gap-1 transition shrink-0 ${
+              activeTab === 'chatbot' ? 'bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30' : 'text-slate-400'
+            }`}
+          >
+            <Sparkles className="h-3 w-3 text-sky-400" /> AI Concierge
+          </button>
+        </div>
+      )}
     </header>
   );
 };
