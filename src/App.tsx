@@ -15,6 +15,7 @@ import { PricePredictions } from './components/PricePredictions';
 import { FareAnalytics } from './components/FareAnalytics';
 import { TrackedFlights } from './components/TrackedFlights';
 import { Recommendations } from './components/Recommendations';
+import { TravelAdvisoryHub } from './components/TravelAdvisoryHub';
 import { UserProfile } from './components/UserProfile';
 import { GeminiChatbot } from './components/GeminiChatbot';
 import { LiveVoiceAssistant } from './components/LiveVoiceAssistant';
@@ -50,6 +51,8 @@ const AppContent: React.FC = () => {
         return <TrackedFlights />;
       case 'recommendations':
         return <Recommendations />;
+      case 'advisory':
+        return <TravelAdvisoryHub />;
       case 'chatbot':
         return <GeminiChatbot />;
       case 'voice':

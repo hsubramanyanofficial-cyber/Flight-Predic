@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { AirportInput } from './AirportInput';
 import { FlightCard } from './FlightCard';
+import { FlightMap } from './FlightMap';
 import { FlightOffer, PricePrediction, PriceIntelligence } from '../types';
 import * as api from '../services/api';
 import { ArrowLeftRight, SlidersHorizontal, ArrowUpDown, Sparkles, AlertCircle, RefreshCw, Info, Calendar } from 'lucide-react';
@@ -411,6 +412,13 @@ export const SearchFlights: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Interactive Flight Path Map Component */}
+      <FlightMap
+        originCode={searchParams.origin}
+        destinationCode={searchParams.destination}
+        comparedFlights={offers}
+      />
 
       {/* Flight Offers List */}
       <div className="space-y-4">

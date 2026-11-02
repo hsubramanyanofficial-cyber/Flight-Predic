@@ -4,6 +4,7 @@ import { Scale, X, ExternalLink, Sparkles, Luggage, Utensils, ShieldCheck, Arrow
 import { evaluatePriceIntelligence } from '../data/analytics';
 import { predictFlightFare } from '../ml/model';
 import { PriceHistoryTrend } from './PriceHistoryTrend';
+import { FlightMap } from './FlightMap';
 import { formatCurrency } from '../utils/currency';
 
 export const FlightComparison: React.FC = () => {
@@ -78,6 +79,15 @@ export const FlightComparison: React.FC = () => {
         destination={destCode}
         originCity={originCity}
         destCity={destCity}
+        comparedFlights={comparisonList}
+      />
+
+      {/* Interactive Flight Path & Hub Map Component */}
+      <FlightMap
+        originCode={originCode}
+        destinationCode={destCode}
+        originCity={originCity}
+        destinationCity={destCity}
         comparedFlights={comparisonList}
       />
 

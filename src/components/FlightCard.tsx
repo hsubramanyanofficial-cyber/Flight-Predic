@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { FlightOffer, PricePrediction, PriceIntelligence } from '../types';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
-import { Clock, ShieldCheck, ChevronDown, ChevronUp, Bell, Scale, ExternalLink, Sparkles, Check, Luggage, Utensils } from 'lucide-react';
+import { Clock, ShieldCheck, ChevronDown, ChevronUp, Bell, Scale, ExternalLink, Sparkles, Check, Luggage, Utensils, Armchair } from 'lucide-react';
+import { SeatMapModal } from './SeatMapModal';
 
 interface FlightCardProps {
   flight: FlightOffer;
@@ -22,6 +23,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
   } = useApp();
 
   const [expanded, setExpanded] = useState(false);
+  const [isSeatMapOpen, setIsSeatMapOpen] = useState(false);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingSuccess, setTrackingSuccess] = useState(false);
 
@@ -205,11 +207,20 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
           {/* Actions */}
           <div className="mt-4 flex items-center gap-2">
             <button
+              onClick={() => setIsSeatMapOpen(true)}
+              className="py-2 px-2.5 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800/80 text-sky-400 hover:border-sky-500/50 hover:text-sky-300 transition flex items-center justify-center gap-1.5"
+              title="View cabin layout & select seat"
+            >
+              <Armchair className="h-3.5 w-3.5" />
+              <span>Seat Map</span>
+            </button>
+
+            <button
               onClick={() => {
                 if (inComparison) removeFromComparison(flight.id);
                 else addToComparison(flight);
               }}
-              className={`flex-1 py-2 px-3 text-xs font-medium rounded-lg border transition flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg border transition flex items-center justify-center gap-1 ${
                 inComparison
                   ? 'border-sky-500 bg-sky-500/20 text-sky-300'
                   : 'border-slate-700 bg-slate-800/80 text-slate-200 hover:border-slate-600 hover:text-white'
@@ -223,7 +234,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
               href={flight.bookingUrl || '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2 px-4 text-xs font-semibold text-slate-950 bg-sky-400 hover:bg-sky-300 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
+              className="py-2 px-3.5 text-xs font-semibold text-slate-950 bg-sky-400 hover:bg-sky-300 rounded-lg transition flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
             >
               <span>Book</span>
               <ExternalLink className="h-3.5 w-3.5" />
@@ -233,6 +244,15 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, prediction, inte
         </div>
 
       </div>
+
+      {/* Seat Map Modal */}
+      {isSeatMapOpen && (
+        <SeatMapModal
+          flight={flight}
+          onClose={() => setIsSeatMapOpen(false)}
+          currency={currency}
+        />
+      )}
 
       {/* Accordion Footer: Baggage, Policies, and Track Button */}
       <div className="px-5 py-2.5 border-t border-slate-800/60 bg-slate-950/20 flex flex-wrap items-center justify-between gap-3 text-xs">
