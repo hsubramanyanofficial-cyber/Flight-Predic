@@ -1,4 +1,5 @@
 export type CabinClass = 'economy' | 'premium_economy' | 'business';
+export type { SupportedCurrency } from '../utils/currency';
 
 export interface Airport {
   code: string;
@@ -220,6 +221,77 @@ export interface TripLeg {
   status: 'planned' | 'tracked' | 'booked';
 }
 
+export interface PackingItem {
+  id: string;
+  category: 'clothing' | 'toiletries' | 'electronics' | 'documents' | 'essentials' | 'destination_specific';
+  name: string;
+  quantity?: number;
+  packed: boolean;
+  isEssential: boolean;
+  notes?: string;
+}
+
+export interface PackingChecklistData {
+  destinationClimate: string;
+  weatherSummary: string;
+  recommendedDressCode: string;
+  durationDays: number;
+  tripType?: 'leisure' | 'business' | 'adventure' | 'beach' | 'winter' | 'cultural';
+  items: PackingItem[];
+  lastGeneratedAt: string;
+}
+
+export interface AirlineBaggageRule {
+  airlineCode: string;
+  airlineName: string;
+  isDomesticDefault: boolean;
+  cabinAllowanceKg: {
+    economy: number;
+    premium_economy?: number;
+    business: number;
+  };
+  checkInAllowanceKg: {
+    economy: number;
+    premium_economy?: number;
+    business: number;
+  };
+  cabinPieces: number;
+  maxPieceWeightKg: number;
+  excessRatePerKgAirportInr: number;
+  prebookTiersInr: {
+    plus3kg?: number;
+    plus5kg: number;
+    plus10kg: number;
+    plus15kg: number;
+    plus30kg?: number;
+  };
+  internationalConcept?: 'weight' | 'piece';
+  extraPieceRateInr?: number;
+  specialEquipmentFeeInr: number;
+  notes: string;
+}
+
+export interface LegBaggageEstimate {
+  legId: string;
+  airlineName: string;
+  cabinClass: CabinClass;
+  isDomestic: boolean;
+  checkedBagsCount: number;
+  totalCheckedWeightKg: number;
+  carryOnBagsCount: number;
+  carryOnWeightKg: number;
+  specialEquipment?: string;
+  freeCheckInKg: number;
+  freeCabinKg: number;
+  excessCheckInKg: number;
+  excessCabinKg: number;
+  prebookFeeInr: number;
+  airportFeeInr: number;
+  savingsByPrebookingInr: number;
+  isWithinAllowance: boolean;
+  warnings: string[];
+}
+
 export interface TripItinerary {
   id: string;
   userId?: string;
@@ -229,6 +301,8 @@ export interface TripItinerary {
   endDate: string;
   budgetInr?: number;
   legs: TripLeg[];
+  packingChecklist?: PackingChecklistData;
+  baggageEstimates?: Record<string, LegBaggageEstimate>;
   createdAt: string;
   updatedAt: string;
 }

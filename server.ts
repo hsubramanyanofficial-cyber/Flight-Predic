@@ -10,6 +10,7 @@ import { searchAirports, INDIAN_AIRPORTS, getAirportByCode } from './src/data/ai
 import { predictFlightFare, FPPS_MODEL_METADATA } from './src/ml/model.ts';
 import { getRouteAnalytics, evaluatePriceIntelligence } from './src/data/analytics.ts';
 import { generateFlightOffers } from './src/services/flightEngine.ts';
+import { generateLocalChecklist } from './src/services/packingService.ts';
 import { CabinClass, TrackedFlight, InAppNotification, UserPreferences } from './src/types/index.ts';
 
 dotenv.config();
@@ -742,6 +743,81 @@ app.post('/api/gemini/generate-video', async (req: Request, res: Response) => {
     console.error('Video Generation Error:', err);
     res.status(500).json({
       error: err.message || 'Video generation failed. Note: gemini-omni-1.1-flash requires a billing-enabled API key in AI Studio Secrets.'
+    });
+  }
+});
+
+// 5. AI Packing Checklist Generator (Destination Climate & Duration aware)
+// Uses gemini-3.8-flash with structured JSON output
+app.post('/api/trip/generate-packing-checklist', async (req: Request, res: Response) => {
+  const {
+    destinationCity = 'Dubai',
+    destinationCountry = '',
+    startDate = '',
+    endDate = '',
+    durationDays = 7,
+    tripType = 'leisure',
+    cabinClass = 'economy'
+  } = req.body;
+
+  try {
+    const prompt = `You are FPPS AI Travel Concierge.
+Generate an intelligent, highly personalized, climate-and-duration-aware packing checklist for a traveler.
+Travel Details:
+- Destination City: ${destinationCity} ${destinationCountry ? `(${destinationCountry})` : ''}
+- Dates: ${startDate || 'Upcoming'} to ${endDate || 'Upcoming'} (${durationDays} days duration)
+- Travel Style: ${tripType}
+- Flight Cabin Class: ${cabinClass}
+
+Analyze the expected climate, season, and temperature for ${destinationCity} during these travel dates.
+Calculate scaled clothing quantities matching the ${durationDays}-day trip length.
+Include critical airline luggage rules (e.g., liquids <= 100ml in transparent pouch, power banks mandatory in carry-on under 100Wh, local plug adapters).
+
+Output ONLY a valid JSON object matching this schema:
+{
+  "destinationClimate": "string (e.g., 'Arid Subtropical Desert')",
+  "weatherSummary": "string (e.g., 'Warm daytime 29°C–32°C, evening 20°C. Zero expected precipitation.')",
+  "recommendedDressCode": "string (e.g., 'Lightweight breathable linens with modest shoulder/knee coverage for cultural venues; light sweater for air-conditioned indoor spaces.')",
+  "durationDays": ${durationDays},
+  "items": [
+    {
+      "id": "string",
+      "category": "clothing" | "toiletries" | "electronics" | "documents" | "essentials" | "destination_specific",
+      "name": "string",
+      "quantity": number,
+      "packed": false,
+      "isEssential": boolean,
+      "notes": "string"
+    }
+  ]
+}
+Include between 16 and 22 actionable, high-utility items.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json'
+      }
+    });
+
+    const text = response.text || '';
+    const parsed = JSON.parse(text);
+    return res.json({
+      success: true,
+      data: {
+        ...parsed,
+        durationDays: Number(durationDays) || 7,
+        lastGeneratedAt: new Date().toISOString()
+      }
+    });
+  } catch (err: any) {
+    console.error('Gemini packing checklist generation error, using fallback:', err.message || err);
+    const fallback = generateLocalChecklist(destinationCity, Number(durationDays) || 7, tripType);
+    res.json({
+      success: true,
+      data: fallback,
+      fallbackUsed: true
     });
   }
 });

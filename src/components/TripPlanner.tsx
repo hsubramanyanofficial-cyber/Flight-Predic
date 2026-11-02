@@ -25,8 +25,16 @@ import {
   ChevronRight,
   Sparkles,
   Link as LinkIcon,
-  Unlink
+  Unlink,
+  CalendarPlus,
+  Download,
+  Luggage,
+  CheckSquare
 } from 'lucide-react';
+import { downloadTripIcs, downloadLegIcs } from '../utils/icsExport';
+import { BaggageFeeCalculator } from './BaggageFeeCalculator';
+import { PackingChecklist } from './PackingChecklist';
+import { PackingChecklistData } from '../types';
 
 export const TripPlanner: React.FC = () => {
   const {
@@ -58,6 +66,9 @@ export const TripPlanner: React.FC = () => {
   const [isAddLegModalOpen, setIsAddLegModalOpen] = useState(false);
   const [linkingLeg, setLinkingLeg] = useState<TripLeg | null>(null);
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [exportedIcs, setExportedIcs] = useState(false);
+  const [exportedLegId, setExportedLegId] = useState<string | null>(null);
+  const [tripSubTab, setTripSubTab] = useState<'itinerary' | 'baggage' | 'checklist'>('itinerary');
 
   // New Trip form state
   const [tripForm, setTripForm] = useState({
@@ -267,6 +278,45 @@ export const TripPlanner: React.FC = () => {
     setTimeout(() => setCopiedSummary(false), 2500);
   };
 
+  // Export full multi-leg itinerary to standard .ics calendar file
+  const handleExportToCalendar = () => {
+    if (!activeTrip || activeTrip.legs.length === 0) return;
+    downloadTripIcs(activeTrip, currency);
+    setExportedIcs(true);
+    setTimeout(() => setExportedIcs(false), 3000);
+  };
+
+  // Export a single flight segment to .ics calendar file
+  const handleExportLegToCalendar = (leg: TripLeg) => {
+    if (!activeTrip) return;
+    downloadLegIcs(leg, activeTrip.title, currency);
+    setExportedLegId(leg.id);
+    setTimeout(() => setExportedLegId(null), 3000);
+  };
+
+  // Apply calculated pre-booking baggage fees to a trip leg
+  const handleUpdateLegFare = (legId: string, additionalBaggageFeeInr: number) => {
+    if (!activeTrip) return;
+    const updatedLegs = activeTrip.legs.map(leg => {
+      if (leg.id === legId) {
+        return {
+          ...leg,
+          fareInr: (leg.fareInr || 0) + additionalBaggageFeeInr,
+          notes: leg.notes
+            ? `${leg.notes} · Includes +₹${additionalBaggageFeeInr.toLocaleString('en-IN')} baggage`
+            : `Includes +₹${additionalBaggageFeeInr.toLocaleString('en-IN')} pre-booked baggage`
+        };
+      }
+      return leg;
+    });
+    updateTrip(activeTrip.id, { legs: updatedLegs });
+  };
+
+  // Persist updated checklist data to active trip
+  const handleUpdateTripChecklist = (tripId: string, checklist: PackingChecklistData) => {
+    updateTrip(tripId, { packingChecklist: checklist });
+  };
+
   return (
     <div className="space-y-8 pb-16">
       {/* Top Banner & Header */}
@@ -290,6 +340,25 @@ export const TripPlanner: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <button
+            onClick={handleExportToCalendar}
+            disabled={!activeTrip || activeTrip.legs.length === 0}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-semibold transition disabled:opacity-40 disabled:pointer-events-none shadow-sm cursor-pointer"
+            title="Export organized flight segments to an .ics calendar file for Apple Calendar, Google Calendar, Outlook, etc."
+          >
+            {exportedIcs ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span className="text-emerald-400 font-bold">Calendar Exported!</span>
+              </>
+            ) : (
+              <>
+                <CalendarPlus className="h-4 w-4 text-sky-400" />
+                <span>Export to Calendar (.ics)</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={copyToClipboard}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900/80 hover:bg-slate-850 text-slate-200 text-xs font-medium transition"
@@ -344,15 +413,82 @@ export const TripPlanner: React.FC = () => {
         </div>
       )}
 
-      {/* Main Active Itinerary Dashboard */}
+      {/* Trip Feature Mode Switcher Tabs */}
+      {activeTrip && (
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setTripSubTab('itinerary')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
+              tripSubTab === 'itinerary'
+                ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/20'
+                : 'bg-slate-900/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <Plane className="h-4 w-4" />
+            <span>Itinerary & Flight Legs</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+              tripSubTab === 'itinerary' ? 'bg-slate-950/20 text-slate-900 font-bold' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {totalLegs}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTripSubTab('baggage')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
+              tripSubTab === 'baggage'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-900/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <Luggage className="h-4 w-4" />
+            <span>Baggage Fees Calculator</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+              tripSubTab === 'baggage' ? 'bg-slate-950/20 text-slate-900 font-bold' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            }`}>
+              Airline Rules & Tariffs
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTripSubTab('checklist')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
+              tripSubTab === 'checklist'
+                ? 'bg-purple-500 text-white border-purple-400 shadow-md shadow-purple-500/20'
+                : 'bg-slate-900/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>AI Packing Checklist</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+              tripSubTab === 'checklist' ? 'bg-slate-950/20 text-white font-bold' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+            }`}>
+              Climate Intelligence
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Main Active Itinerary Dashboard or Sub-Views */}
       {activeTrip ? (
-        <div className="space-y-6">
-          {/* Card 1: Overview, Budget Progress, and Route Path */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-xl shadow-xl space-y-6">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-white tracking-tight">
+        tripSubTab === 'baggage' ? (
+          <BaggageFeeCalculator
+            activeTrip={activeTrip}
+            onUpdateLegFare={handleUpdateLegFare}
+          />
+        ) : tripSubTab === 'checklist' ? (
+          <PackingChecklist
+            activeTrip={activeTrip}
+            onUpdateTripChecklist={handleUpdateTripChecklist}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* Card 1: Overview, Budget Progress, and Route Path */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-xl shadow-xl space-y-6">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-white tracking-tight">
                     {activeTrip.title}
                   </h2>
                   <button
@@ -407,6 +543,24 @@ export const TripPlanner: React.FC = () => {
                     <Clock className="h-3.5 w-3.5 text-amber-400" />
                     ~{totalAirDistanceKm.toLocaleString()} km Total Great Circle Flight Distance
                   </span>
+                  <span className="text-slate-600">|</span>
+                  <button
+                    onClick={() => setTripSubTab('baggage')}
+                    className="flex items-center gap-1.5 text-slate-300 hover:text-emerald-400 transition cursor-pointer"
+                    title="Open Baggage Fees Calculator"
+                  >
+                    <Luggage className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Baggage Rules</span>
+                  </button>
+                  <span className="text-slate-600">|</span>
+                  <button
+                    onClick={() => setTripSubTab('checklist')}
+                    className="flex items-center gap-1.5 text-slate-300 hover:text-purple-400 transition cursor-pointer"
+                    title="Open AI Packing Checklist"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                    <span>AI Packing List</span>
+                  </button>
                 </div>
               </div>
 
@@ -698,6 +852,33 @@ export const TripPlanner: React.FC = () => {
                           </button>
 
                           <button
+                            onClick={() => setTripSubTab('baggage')}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition cursor-pointer"
+                            title="Calculate airline baggage allowance and excess fees for this leg"
+                          >
+                            <Luggage className="h-3.5 w-3.5 text-emerald-400" />
+                            <span>Baggage</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleExportLegToCalendar(leg)}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition"
+                            title="Export this flight segment to Calendar (.ics)"
+                          >
+                            {exportedLegId === leg.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                <span className="text-emerald-400">Exported</span>
+                              </>
+                            ) : (
+                              <>
+                                <CalendarPlus className="h-3.5 w-3.5 text-sky-400" />
+                                <span>Export .ics</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
                             onClick={() => removeLegFromTrip(activeTrip.id, leg.id)}
                             className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded transition"
                             title="Remove flight leg"
@@ -713,6 +894,7 @@ export const TripPlanner: React.FC = () => {
             )}
           </div>
         </div>
+        )
       ) : (
         <div className="text-center py-16 rounded-2xl border border-slate-800 bg-slate-900/50">
           <Compass className="h-12 w-12 text-sky-400 mx-auto mb-3" />

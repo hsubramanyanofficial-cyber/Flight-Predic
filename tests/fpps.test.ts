@@ -235,6 +235,132 @@ flightAudio.toggleMute();
 assert.strictEqual(flightAudio.getMuted(), false, 'toggleMute should toggle back to unmuted');
 console.log('✓ Three.js 3D model, liveries & flight audio tests passed.');
 
+// Test 9: RFC 5545 iCalendar (.ics) Export for Trip Planner
+console.log('9. Testing RFC 5545 iCalendar (.ics) Generator...');
+import { generateTripIcs, generateLegIcs, computeLegDates, escapeIcsText } from '../src/utils/icsExport.ts';
+
+// Test string escaping per RFC 5545
+assert.strictEqual(escapeIcsText('DEL, BOM; DXB\nNotes'), 'DEL\\, BOM\\; DXB\\nNotes', 'Special characters must be escaped');
+
+// Test multi-leg itinerary .ics generation
+const multiLegIcs = generateTripIcs(sampleItinerary, 'INR');
+assert.ok(multiLegIcs.startsWith('BEGIN:VCALENDAR'), 'ICS must start with BEGIN:VCALENDAR');
+assert.ok(multiLegIcs.endsWith('END:VCALENDAR'), 'ICS must end with END:VCALENDAR');
+assert.ok(multiLegIcs.includes('PRODID:-//FPPS Global Flight Price Prediction System//Trip Planner//EN'), 'Must contain FPPS prodid');
+assert.ok(multiLegIcs.includes('X-WR-CALNAME:Asia-Europe Multi-City Hopper'), 'Must contain calendar name');
+
+// Count VEVENT blocks in multi-leg
+const eventMatches = multiLegIcs.match(/BEGIN:VEVENT/g);
+assert.strictEqual(eventMatches?.length, sampleItinerary.legs.length, 'Must contain one VEVENT per flight segment');
+assert.ok(multiLegIcs.includes('DEL ➔ DXB'), 'Must include leg 1 route');
+assert.ok(multiLegIcs.includes('DXB ➔ LHR'), 'Must include leg 2 route');
+assert.ok(multiLegIcs.includes('DTSTART:'), 'Must contain DTSTART timestamps');
+assert.ok(multiLegIcs.includes('DTEND:'), 'Must contain DTEND timestamps');
+assert.ok(multiLegIcs.includes('TRIGGER:-PT3H'), 'Must contain flight departure reminder alarm');
+
+// Test single leg .ics generation
+const singleLegIcs = generateLegIcs(testLeg1, 'Single Leg Export', 'INR');
+const singleEventMatches = singleLegIcs.match(/BEGIN:VEVENT/g);
+assert.strictEqual(singleEventMatches?.length, 1, 'Single leg export must contain exactly 1 VEVENT');
+assert.ok(singleLegIcs.includes('DEL ➔ DXB'), 'Must contain DEL ➔ DXB route');
+
+// Test computeLegDates overnight logic
+const overnightLeg: TripLeg = {
+  id: 'overnight',
+  origin: 'DEL',
+  destination: 'LHR',
+  originCity: 'New Delhi',
+  destinationCity: 'London',
+  date: '2026-10-15',
+  departureTime: '23:30',
+  arrivalTime: '06:15',
+  cabinClass: 'economy',
+  status: 'planned'
+};
+const overnightDates = computeLegDates(overnightLeg);
+assert.strictEqual(overnightDates.start.getDate(), 15, 'Start date should be 15th');
+assert.strictEqual(overnightDates.end.getDate(), 16, 'End date should roll over to 16th for overnight flight');
+console.log('✓ RFC 5545 iCalendar (.ics) export tests passed.');
+
+// Test 10: Airline Baggage Fees Calculator Engine
+console.log('10. Testing Airline Baggage Fees Calculator Engine...');
+import { calculateBaggageFees, getAirlineBaggageRule, AIRLINE_BAGGAGE_RULES } from '../src/data/baggageRules.ts';
+
+// Verify airline rules lookup
+const indigoRule = getAirlineBaggageRule('IndiGo');
+assert.strictEqual(indigoRule.checkInAllowanceKg.economy, 15, 'IndiGo domestic economy allowance should be 15 kg');
+assert.strictEqual(indigoRule.cabinAllowanceKg.economy, 7, 'IndiGo cabin allowance should be 7 kg');
+assert.strictEqual(indigoRule.excessRatePerKgAirportInr, 550, 'IndiGo airport excess rate should be ₹550/kg');
+
+const airIndiaRule = getAirlineBaggageRule('Air India');
+assert.strictEqual(airIndiaRule.checkInAllowanceKg.economy, 25, 'Air India economy allowance should be generous 25 kg');
+
+// Test within-allowance calculation
+const withinAllowance = calculateBaggageFees({
+  airlineName: 'IndiGo',
+  cabinClass: 'economy',
+  checkedBagsCount: 1,
+  totalCheckedWeightKg: 14,
+  carryOnBagsCount: 1,
+  carryOnWeightKg: 6
+});
+assert.strictEqual(withinAllowance.isWithinAllowance, true, '14kg on IndiGo should be within 15kg allowance');
+assert.strictEqual(withinAllowance.prebookFeeInr, 0, 'No excess fee when within allowance');
+
+// Test excess baggage pre-booking savings calculation
+const excessCalc = calculateBaggageFees({
+  airlineName: 'IndiGo',
+  cabinClass: 'economy',
+  checkedBagsCount: 1,
+  totalCheckedWeightKg: 20, // 5kg excess
+  carryOnBagsCount: 1,
+  carryOnWeightKg: 7
+});
+assert.strictEqual(excessCalc.isWithinAllowance, false, '20kg should be flagged as excess on IndiGo');
+assert.strictEqual(excessCalc.excessCheckInKg, 5, 'Excess check-in weight should be 5 kg');
+assert.strictEqual(excessCalc.prebookFeeInr, 2250, '5kg pre-book fee on IndiGo should be ₹2,250');
+assert.strictEqual(excessCalc.airportFeeInr, 2750, '5kg counter fee at ₹550/kg should be ₹2,750');
+assert.strictEqual(excessCalc.savingsByPrebookingInr, 500, 'Pre-booking savings should be ₹500');
+
+// Test 32kg single piece safety warning
+const overweightBag = calculateBaggageFees({
+  airlineName: 'IndiGo',
+  cabinClass: 'economy',
+  checkedBagsCount: 1,
+  totalCheckedWeightKg: 35, // exceeds 32kg OSHA limit
+  carryOnBagsCount: 1,
+  carryOnWeightKg: 7
+});
+assert.ok(overweightBag.warnings.some(w => w.includes('32 kg')), 'Must warn when single piece exceeds 32kg safety threshold');
+console.log('✓ Airline Baggage Fees engine tests passed.');
+
+// Test 11: Destination Climate & AI Packing Checklist Generator
+console.log('11. Testing Destination Climate & Packing Checklist Generator...');
+import { generateLocalChecklist } from '../src/services/packingService.ts';
+
+// Test desert climate detection (Dubai)
+const dubaiChecklist = generateLocalChecklist('Dubai', 7, 'leisure');
+assert.strictEqual(dubaiChecklist.destinationClimate, 'Arid / Desert', 'Dubai should be classified as Arid / Desert');
+assert.strictEqual(dubaiChecklist.durationDays, 7, 'Duration should be 7 days');
+assert.ok(dubaiChecklist.items.length >= 18, 'Checklist should contain comprehensive items');
+
+// Verify mandatory aviation compliance items
+assert.ok(dubaiChecklist.items.some(i => i.id === 'elec-powerbank' && i.notes?.includes('HAND LUGGAGE')), 'Must flag power bank hand luggage rule');
+assert.ok(dubaiChecklist.items.some(i => i.id === 'toil-liquids' && i.notes?.includes('100ml')), 'Must flag TSA/DGCA 100ml liquids rule');
+
+// Test tropical climate detection (Goa)
+const goaChecklist = generateLocalChecklist('Goa', 4, 'beach');
+assert.strictEqual(goaChecklist.destinationClimate, 'Tropical / Humid', 'Goa should be classified as Tropical');
+assert.ok(goaChecklist.items.some(i => i.id === 'dest-swim'), 'Goa beach trip must include swimwear');
+
+// Test duration scaling (14 days should have more shirts than 3 days)
+const shortTrip = generateLocalChecklist('London', 3, 'business');
+const longTrip = generateLocalChecklist('London', 14, 'business');
+const shortShirts = shortTrip.items.find(i => i.id === 'cloth-shirts')?.quantity || 0;
+const longShirts = longTrip.items.find(i => i.id === 'cloth-shirts')?.quantity || 0;
+assert.ok(longShirts > shortShirts, '14-day trip should recommend more shirts than 3-day trip');
+console.log('✓ Destination Climate & Packing Checklist tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (8/8)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (11/11)');
 console.log('=============================================\n');
