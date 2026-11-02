@@ -78,7 +78,7 @@ export const Home: React.FC = () => {
       destination: 'DXB',
       originCity: 'New Delhi',
       destinationCity: 'Dubai',
-      image: '/src/assets/images/bengaluru_airport_vista_1793549857175.jpg',
+      image: '/images/bengaluru_airport_vista_1793549857175.jpg',
       avgFare: 16500,
       lowestSeen: 13800,
       typicalWindow: '21-45 days out',
@@ -91,7 +91,7 @@ export const Home: React.FC = () => {
       destination: 'BOM',
       originCity: 'New Delhi',
       destinationCity: 'Mumbai',
-      image: '/src/assets/images/delhi_mumbai_skyline_1793549855927.jpg',
+      image: '/images/delhi_mumbai_skyline_1793549855927.jpg',
       avgFare: 4950,
       lowestSeen: 4100,
       typicalWindow: '14-30 days out',
@@ -104,7 +104,7 @@ export const Home: React.FC = () => {
       destination: 'LHR',
       originCity: 'New York',
       destinationCity: 'London',
-      image: '/src/assets/images/hero_aircraft_sky_1793549856138.jpg',
+      image: '/images/hero_aircraft_sky_1793549856138.jpg',
       avgFare: 42000,
       lowestSeen: 34500,
       typicalWindow: '28-60 days out',
@@ -141,7 +141,7 @@ export const Home: React.FC = () => {
         {/* Background Visual Scrim with measured contrast */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/src/assets/images/hero_aircraft_sky_1793549856138.jpg"
+            src="/images/hero_aircraft_sky_1793549856138.jpg"
             alt="Commercial airliner cruising in sunset sky"
             className="w-full h-full object-cover object-center opacity-25"
             referrerPolicy="no-referrer"
