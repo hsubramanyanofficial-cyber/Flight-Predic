@@ -17,6 +17,7 @@ export type NavTab =
   | 'tracked'
   | 'recommendations'
   | 'advisory'
+  | 'carbon'
   | 'chatbot'
   | 'voice'
   | 'maps'

@@ -16,6 +16,7 @@ import { FareAnalytics } from './components/FareAnalytics';
 import { TrackedFlights } from './components/TrackedFlights';
 import { Recommendations } from './components/Recommendations';
 import { TravelAdvisoryHub } from './components/TravelAdvisoryHub';
+import { CarbonFootprintDashboard } from './components/CarbonFootprintDashboard';
 import { UserProfile } from './components/UserProfile';
 import { GeminiChatbot } from './components/GeminiChatbot';
 import { LiveVoiceAssistant } from './components/LiveVoiceAssistant';
@@ -53,6 +54,8 @@ const AppContent: React.FC = () => {
         return <Recommendations />;
       case 'advisory':
         return <TravelAdvisoryHub />;
+      case 'carbon':
+        return <CarbonFootprintDashboard />;
       case 'chatbot':
         return <GeminiChatbot />;
       case 'voice':

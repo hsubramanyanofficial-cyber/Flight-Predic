@@ -65,7 +65,8 @@ export const Header: React.FC = () => {
     { tab: 'analytics', label: 'Fare Analytics' },
     { tab: 'tracked', label: 'Price Alerts' },
     { tab: 'recommendations', label: 'For You' },
-    { tab: 'advisory', label: 'Entry Rules & Visas' }
+    { tab: 'advisory', label: 'Entry Rules & Visas' },
+    { tab: 'carbon', label: 'Carbon Offset' }
   ];
 
   const aiTools: { tab: NavTab; label: string; desc: string; icon: React.ReactNode }[] = [
