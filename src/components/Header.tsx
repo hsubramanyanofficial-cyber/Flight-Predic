@@ -22,6 +22,7 @@ import {
   Luggage
 } from 'lucide-react';
 import { CURRENCIES, SupportedCurrency } from '../utils/currency';
+import { SUPPORTED_LANGUAGES } from '../utils/translation';
 
 export const Header: React.FC = () => {
   const {
@@ -35,14 +36,18 @@ export const Header: React.FC = () => {
     signInWithGoogle,
     logout,
     currency,
-    setCurrency
+    setCurrency,
+    language,
+    setLanguage
   } = useApp();
 
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const aiMenuRef = useRef<HTMLDivElement>(null);
   const currencyMenuRef = useRef<HTMLDivElement>(null);
+  const languageMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,6 +56,9 @@ export const Header: React.FC = () => {
       }
       if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target as Node)) {
         setCurrencyMenuOpen(false);
+      }
+      if (languageMenuRef.current && !languageMenuRef.current.contains(event.target as Node)) {
+        setLanguageMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -239,6 +247,45 @@ export const Header: React.FC = () => {
                       <span>{c.code}</span>
                     </span>
                     <span className="text-[11px] text-slate-400">{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Gemini AI Language Selector Dropdown */}
+          <div className="relative" ref={languageMenuRef}>
+            <button
+              onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-slate-800 bg-slate-900 text-slate-200 text-xs font-mono font-medium hover:border-slate-700 hover:text-white transition"
+              title="Translate interface via Gemini API"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+              <span>{SUPPORTED_LANGUAGES[language]?.nativeName || 'English'}</span>
+              <ChevronDown className={`h-3 w-3 transition-transform ${languageMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {languageMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-800 bg-slate-900/98 p-1.5 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 font-sans">
+                <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-1 flex items-center justify-between">
+                  <span>Gemini AI Interface Language</span>
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                </div>
+                {Object.values(SUPPORTED_LANGUAGES).map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => {
+                      setLanguage(lang.code);
+                      setLanguageMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
+                      language === lang.code
+                        ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <span>{lang.nativeName}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">{lang.name}</span>
                   </button>
                 ))}
               </div>

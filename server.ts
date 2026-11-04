@@ -898,6 +898,32 @@ Return JSON strictly matching this schema:
 });
 
 // -------------------------------------------------------------
+// GEMINI DYNAMIC TRANSLATION ENDPOINT
+// -------------------------------------------------------------
+app.post('/api/translate', async (req: Request, res: Response) => {
+  const { text, targetLanguage } = req.body;
+  if (!text || !targetLanguage) {
+    return res.status(400).json({ success: false, message: 'Missing text or targetLanguage' });
+  }
+  try {
+    const prompt = `Translate the following text into ${targetLanguage}. Maintain accurate aviation, travel, and financial terminology. Return ONLY the translated text without conversational filler or markdown code blocks:
+
+"${text}"`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: prompt
+    });
+
+    const translated = response.text ? response.text.trim() : text;
+    res.json({ success: true, translated });
+  } catch (err: any) {
+    console.error('Translation error:', err);
+    res.json({ success: true, translated: text });
+  }
+});
+
+// -------------------------------------------------------------
 // SERVER & WEBSOCKET SETUP (LIVE API)
 // -------------------------------------------------------------
 

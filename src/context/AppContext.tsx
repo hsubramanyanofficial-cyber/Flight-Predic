@@ -34,6 +34,8 @@ interface AppContextType {
   logout: () => Promise<void>;
   currency: SupportedCurrency;
   setCurrency: (c: SupportedCurrency) => void;
+  language: string;
+  setLanguage: (lang: string) => void;
   userPreferences: UserPreferences | null;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
   trackedFlights: TrackedFlight[];
@@ -190,6 +192,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrencyState(c);
     try {
       localStorage.setItem('fpps_currency', c);
+    } catch {}
+  };
+
+  const [language, setLanguageState] = useState<string>(() => {
+    return localStorage.getItem('fpps_language') || 'en';
+  });
+
+  const setLanguage = (lang: string) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem('fpps_language', lang);
     } catch {}
   };
 
@@ -647,6 +660,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logout,
         currency,
         setCurrency,
+        language,
+        setLanguage,
         userPreferences,
         updatePreferences,
         trackedFlights,
