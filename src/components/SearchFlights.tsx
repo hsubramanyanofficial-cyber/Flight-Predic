@@ -3,12 +3,14 @@ import { useApp } from '../context/AppContext';
 import { AirportInput } from './AirportInput';
 import { FlightCard } from './FlightCard';
 import { FlightMap } from './FlightMap';
+import { CurrencyConverterWidget } from './CurrencyConverterWidget';
 import { FlightOffer, PricePrediction, PriceIntelligence } from '../types';
 import * as api from '../services/api';
+import { formatCurrency } from '../utils/currency';
 import { ArrowLeftRight, SlidersHorizontal, ArrowUpDown, Sparkles, AlertCircle, RefreshCw, Info, Calendar } from 'lucide-react';
 
 export const SearchFlights: React.FC = () => {
-  const { searchParams, setSearchParams, setActiveTab } = useApp();
+  const { searchParams, setSearchParams, setActiveTab, currency } = useApp();
 
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [returnDate, setReturnDate] = useState('');
@@ -78,6 +80,7 @@ export const SearchFlights: React.FC = () => {
   });
 
   const airlinesPresent = Array.from(new Set(offers.map(o => o.airlineName)));
+  const lowestOfferFare = offers.length > 0 ? Math.min(...offers.map(o => o.fare)) : undefined;
 
   return (
     <div className="space-y-8 pb-16">
@@ -257,10 +260,10 @@ export const SearchFlights: React.FC = () => {
                   <span className="text-[11px] font-mono lowercase text-slate-400">{prediction.modelVersion}</span>
                 </div>
                 <h3 className="text-lg font-bold text-white mt-1">
-                  Expected Fare: ₹{prediction.predictedFare.toLocaleString('en-IN')}
+                  Expected Fare: {formatCurrency(prediction.predictedFare, currency)}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  90% Confidence Interval: ₹{prediction.lowerBoundFare.toLocaleString('en-IN')} – ₹{prediction.upperBoundFare.toLocaleString('en-IN')}
+                  90% Confidence Interval: {formatCurrency(prediction.lowerBoundFare, currency)} – {formatCurrency(prediction.upperBoundFare, currency)}
                 </p>
               </div>
 
@@ -310,7 +313,7 @@ export const SearchFlights: React.FC = () => {
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-xs text-slate-400">30-Day Average</span>
                   <span className="text-xl font-bold font-mono text-white">
-                    ₹{intelligence.historicalMean.toLocaleString('en-IN')}
+                    {formatCurrency(intelligence.historicalMean, currency)}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-2 leading-relaxed">
@@ -332,6 +335,12 @@ export const SearchFlights: React.FC = () => {
 
         </div>
       )}
+
+      {/* Real-Time Currency Conversion Tool */}
+      <CurrencyConverterWidget
+        lowestFareInr={lowestOfferFare}
+        expectedFareInr={prediction?.predictedFare}
+      />
 
       {/* Results Controls Bar (Sorting & Filtering) */}
       <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-4">

@@ -410,6 +410,47 @@ assert.strictEqual(prebookFee, 1080, 'Pre-book fee at 40% discount should be ₹
 assert.strictEqual(airportFee - prebookFee, 720, 'Savings by prebooking should be ₹720');
 console.log('✓ Baggage Allowance Tracker & Custom Policy tests passed.');
 
+// Test 14: Real-Time Currency Conversion & Market Rates
+console.log('14. Testing Real-Time Currency Conversion & Inverse Rates...');
+import { CURRENCIES } from '../src/utils/currency.ts';
+assert.ok(CURRENCIES.USD.rateFromInr > 0, 'USD rate must be positive');
+assert.ok(CURRENCIES.EUR.rateFromInr > 0, 'EUR rate must be positive');
+assert.ok(CURRENCIES.GBP.rateFromInr > 0, 'GBP rate must be positive');
+assert.ok(CURRENCIES.AED.rateFromInr > 0, 'AED rate must be positive');
+
+const convertedUsdFx = convertFromInr(10000, 'USD');
+assert.strictEqual(convertedUsdFx, 116, '₹10,000 INR should convert to $116 USD at 0.0116 rate');
+
+const formattedAed = formatCurrency(10000, 'AED');
+assert.ok(formattedAed.includes('426'), '₹10,000 INR should format as AED 426');
+console.log('✓ Real-time currency conversion tests passed.');
+
+// Test 15: Frequent Flyer Miles Estimator Engine
+console.log('15. Testing Frequent Flyer Miles Estimator Engine...');
+import { LOYALTY_PROGRAMS } from '../src/components/FrequentFlyerEstimator.tsx';
+assert.ok(LOYALTY_PROGRAMS.length >= 6, 'Should support at least 6 major loyalty programs');
+
+const aiProgram = LOYALTY_PROGRAMS.find(p => p.id === 'ai_flying_returns');
+assert.ok(aiProgram, 'Air India Flying Returns program must exist');
+assert.strictEqual(aiProgram?.alliance, 'Star Alliance', 'Air India must be Star Alliance');
+
+// Distance for DEL to LHR: ~6,727 km = ~4,180 statute miles
+const delLhrKm = calculateAirDistanceKm('DEL', 'LHR');
+const delLhrMiles = Math.round(delLhrKm * 0.621371);
+assert.ok(delLhrMiles > 4000 && delLhrMiles < 4500, 'DEL-LHR distance should be ~4,180 statute miles');
+
+// Economy: 100% miles; Business: 200% miles
+const econMiles = Math.round(delLhrMiles * (aiProgram?.cabinMultiplier.economy || 1.0));
+const bizMiles = Math.round(delLhrMiles * (aiProgram?.cabinMultiplier.business || 2.0));
+assert.strictEqual(econMiles, delLhrMiles, 'Economy should earn 100% of flight miles');
+assert.strictEqual(bizMiles, delLhrMiles * 2, 'Air India Business Class should earn 200% of flight miles');
+
+// Gold tier: +50% bonus miles
+const goldBonus = Math.round(bizMiles * ((aiProgram?.tierBonusPercent.gold || 50) / 100));
+const totalGoldBizMiles = bizMiles + goldBonus;
+assert.strictEqual(totalGoldBizMiles, Math.round(bizMiles * 1.5), 'Gold tier should add 50% bonus miles');
+console.log('✓ Frequent Flyer Miles Estimator tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (13/13)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (15/15)');
 console.log('=============================================\n');

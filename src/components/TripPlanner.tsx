@@ -29,12 +29,14 @@ import {
   CalendarPlus,
   Download,
   Luggage,
-  CheckSquare
+  CheckSquare,
+  Award
 } from 'lucide-react';
 import { downloadTripIcs, downloadLegIcs } from '../utils/icsExport';
 import { BaggageFeeCalculator } from './BaggageFeeCalculator';
 import { BaggageAllowanceTracker } from './BaggageAllowanceTracker';
 import { PackingChecklist } from './PackingChecklist';
+import { FrequentFlyerEstimator } from './FrequentFlyerEstimator';
 import { PackingChecklistData } from '../types';
 
 export const TripPlanner: React.FC = () => {
@@ -69,7 +71,7 @@ export const TripPlanner: React.FC = () => {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [exportedIcs, setExportedIcs] = useState(false);
   const [exportedLegId, setExportedLegId] = useState<string | null>(null);
-  const [tripSubTab, setTripSubTab] = useState<'itinerary' | 'baggage' | 'checklist'>('itinerary');
+  const [tripSubTab, setTripSubTab] = useState<'itinerary' | 'baggage' | 'checklist' | 'miles'>('itinerary');
 
   // New Trip form state
   const [tripForm, setTripForm] = useState({
@@ -467,6 +469,23 @@ export const TripPlanner: React.FC = () => {
               Climate Intelligence
             </span>
           </button>
+
+          <button
+            onClick={() => setTripSubTab('miles')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
+              tripSubTab === 'miles'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                : 'bg-slate-900/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            <Award className="h-4 w-4" />
+            <span>Frequent Flyer Rewards</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+              tripSubTab === 'miles' ? 'bg-slate-950/20 text-slate-900 font-bold' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+            }`}>
+              Miles & Alliances
+            </span>
+          </button>
         </div>
       )}
 
@@ -481,6 +500,10 @@ export const TripPlanner: React.FC = () => {
           <PackingChecklist
             activeTrip={activeTrip}
             onUpdateTripChecklist={handleUpdateTripChecklist}
+          />
+        ) : tripSubTab === 'miles' ? (
+          <FrequentFlyerEstimator
+            activeTrip={activeTrip}
           />
         ) : (
           <div className="space-y-6">
@@ -561,6 +584,15 @@ export const TripPlanner: React.FC = () => {
                   >
                     <Sparkles className="h-3.5 w-3.5 text-purple-400" />
                     <span>AI Packing List</span>
+                  </button>
+                  <span className="text-slate-600">|</span>
+                  <button
+                    onClick={() => setTripSubTab('miles')}
+                    className="flex items-center gap-1.5 text-slate-300 hover:text-amber-400 transition cursor-pointer"
+                    title="Open Frequent Flyer Miles Estimator"
+                  >
+                    <Award className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Loyalty Miles (~{Math.round(totalAirDistanceKm * 0.621371).toLocaleString()} mi)</span>
                   </button>
                 </div>
               </div>
