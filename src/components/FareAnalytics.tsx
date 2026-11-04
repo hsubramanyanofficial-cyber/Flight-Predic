@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { Activity, Calendar, ArrowRight, ShieldCheck, Database, Info, Filter, Download } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
+import { D3FareTrendChart } from './D3FareTrendChart';
 
 export const FareAnalytics: React.FC = () => {
   const { searchParams, setActiveTab, currency } = useApp();
@@ -206,61 +207,14 @@ export const FareAnalytics: React.FC = () => {
 
           </div>
 
-          {/* Chart 1: 30-Day Trend Area Chart */}
-          <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  30-Day Airfare Movement Trend
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Daily average and observed price range on {analytics.route} (Economy Non-Stop)
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-slate-400">Currency: {currency}</span>
-                <button
-                  onClick={handleDownloadCSV}
-                  disabled={!analytics || loading}
-                  className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-medium text-slate-200 hover:text-white hover:border-slate-600 transition flex items-center gap-1.5 shadow-sm"
-                  title="Export raw 30-day time series data to CSV"
-                >
-                  <Download className="h-3.5 w-3.5 text-sky-400" />
-                  <span>Download CSV</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="h-72 w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={analytics.trend30Days}>
-                  <defs>
-                    <linearGradient id="fareGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }}
-                    tickFormatter={(val: string) => val.slice(5)}
-                  />
-                  <YAxis
-                    tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }}
-                    tickFormatter={(val: number) => formatCurrency(val, currency, { compact: true })}
-                    domain={['dataMin - 500', 'dataMax + 500']}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                    formatter={(val: any) => [formatCurrency(Number(val), currency), 'Fare']}
-                  />
-                  <Area type="monotone" dataKey="avgFare" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#fareGrad)" name="Average Fare" />
-                  <Line type="monotone" dataKey="minFare" stroke="#34d399" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Min Fare" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {/* Chart 1: D3-Based Interactive 30-Day Airfare Movement Trend */}
+          <D3FareTrendChart
+            data={analytics.trend30Days}
+            origin={analytics.origin}
+            destination={analytics.destination}
+            currency={currency}
+            height={380}
+          />
 
           {/* Dual Charts Grid: Airline Comparison + Day-of-Week Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

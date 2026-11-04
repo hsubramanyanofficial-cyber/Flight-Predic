@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { downloadTripIcs, downloadLegIcs } from '../utils/icsExport';
 import { BaggageFeeCalculator } from './BaggageFeeCalculator';
+import { BaggageAllowanceTracker } from './BaggageAllowanceTracker';
 import { PackingChecklist } from './PackingChecklist';
 import { PackingChecklistData } from '../types';
 
@@ -442,11 +443,11 @@ export const TripPlanner: React.FC = () => {
             }`}
           >
             <Luggage className="h-4 w-4" />
-            <span>Baggage Fees Calculator</span>
+            <span>Baggage Allowance & Tracker</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
               tripSubTab === 'baggage' ? 'bg-slate-950/20 text-slate-900 font-bold' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
             }`}>
-              Airline Rules & Tariffs
+              Weight Gauges & Policy
             </span>
           </button>
 
@@ -472,7 +473,7 @@ export const TripPlanner: React.FC = () => {
       {/* Main Active Itinerary Dashboard or Sub-Views */}
       {activeTrip ? (
         tripSubTab === 'baggage' ? (
-          <BaggageFeeCalculator
+          <BaggageAllowanceTracker
             activeTrip={activeTrip}
             onUpdateLegFare={handleUpdateLegFare}
           />

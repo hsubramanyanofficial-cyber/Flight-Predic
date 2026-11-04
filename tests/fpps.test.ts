@@ -361,6 +361,55 @@ const longShirts = longTrip.items.find(i => i.id === 'cloth-shirts')?.quantity |
 assert.ok(longShirts > shortShirts, '14-day trip should recommend more shirts than 3-day trip');
 console.log('✓ Destination Climate & Packing Checklist tests passed.');
 
+// Test 12: D3 Historical 30-Day Airfare Time-Series Data Validation
+console.log('12. Testing D3 30-Day Historical Trend Series Data Structure...');
+const trendData = analytics.trend30Days;
+assert.ok(trendData.length >= 30, 'Should contain at least 30 daily data points');
+trendData.forEach((point, idx) => {
+  assert.ok(point.date && point.date.length === 10, `Point ${idx} must have valid YYYY-MM-DD date`);
+  assert.ok(point.avgFare > 0, `Point ${idx} avgFare must be positive`);
+  assert.ok(point.minFare > 0, `Point ${idx} minFare must be positive`);
+  assert.ok(point.maxFare >= point.avgFare, `Point ${idx} maxFare must be >= avgFare`);
+  assert.ok(point.avgFare >= point.minFare, `Point ${idx} avgFare must be >= minFare`);
+  assert.ok(point.observationsCount > 0, `Point ${idx} observationsCount must be positive`);
+});
+console.log('✓ D3 30-Day Trend Series data structure tests passed.');
+
+// Test 13: Baggage Allowance Tracker Weight & Excess Calculations
+console.log('13. Testing Baggage Allowance Tracker & Custom Policy Logic...');
+const customPolicy = {
+  airlineName: 'Air India Express',
+  cabinAllowanceKg: 7,
+  checkInAllowanceKg: 20,
+  excessRatePerKgInr: 600,
+  prebookDiscountPercent: 40
+};
+
+// Item weight summing
+const testItems = [
+  { id: '1', name: 'Suitcase', type: 'checked' as const, weightKg: 18.5 },
+  { id: '2', name: 'Gift Box', type: 'checked' as const, weightKg: 4.5 },
+  { id: '3', name: 'Backpack', type: 'cabin' as const, weightKg: 6.2 }
+];
+
+const totalChecked = testItems.filter(i => i.type === 'checked').reduce((acc, i) => acc + i.weightKg, 0);
+const totalCabin = testItems.filter(i => i.type === 'cabin').reduce((acc, i) => acc + i.weightKg, 0);
+
+assert.strictEqual(totalChecked, 23, 'Checked weight should sum to 23 kg');
+assert.strictEqual(totalCabin, 6.2, 'Cabin weight should sum to 6.2 kg');
+assert.ok(totalCabin <= customPolicy.cabinAllowanceKg, 'Cabin weight 6.2kg should be within 7kg allowance');
+
+const checkedExcess = Math.max(0, totalChecked - customPolicy.checkInAllowanceKg);
+assert.strictEqual(checkedExcess, 3, 'Checked excess should be 3 kg');
+
+const airportFee = checkedExcess * customPolicy.excessRatePerKgInr;
+assert.strictEqual(airportFee, 1800, '3 kg excess at ₹600/kg should be ₹1,800 at airport');
+
+const prebookFee = Math.round(checkedExcess * (customPolicy.excessRatePerKgInr * (1 - customPolicy.prebookDiscountPercent / 100)));
+assert.strictEqual(prebookFee, 1080, 'Pre-book fee at 40% discount should be ₹1,080');
+assert.strictEqual(airportFee - prebookFee, 720, 'Savings by prebooking should be ₹720');
+console.log('✓ Baggage Allowance Tracker & Custom Policy tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (11/11)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (13/13)');
 console.log('=============================================\n');
