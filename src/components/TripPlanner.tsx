@@ -462,11 +462,11 @@ export const TripPlanner: React.FC = () => {
             }`}
           >
             <Sparkles className="h-4 w-4" />
-            <span>AI Packing Checklist</span>
+            <span>Smart Packing Helper</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
               tripSubTab === 'checklist' ? 'bg-slate-950/20 text-white font-bold' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
             }`}>
-              Climate Intelligence
+              Weather-Aware AI
             </span>
           </button>
 

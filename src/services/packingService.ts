@@ -4,6 +4,7 @@
  */
 
 import { PackingChecklistData, PackingItem } from '../types';
+import { DestinationWeatherForecast } from './weatherService';
 
 /**
  * Intelligent client-side fallback checklist generator when offline or in demo mode.
@@ -11,7 +12,8 @@ import { PackingChecklistData, PackingItem } from '../types';
 export function generateLocalChecklist(
   destinationCity: string,
   durationDays: number = 7,
-  tripType: string = 'leisure'
+  tripType: string = 'leisure',
+  weatherForecast?: DestinationWeatherForecast
 ): PackingChecklistData {
   const cityLower = (destinationCity || '').toLowerCase();
   const days = Math.max(1, durationDays);
@@ -302,12 +304,97 @@ export function generateLocalChecklist(
     });
   }
 
+  // Weather-Aware Dynamic Item Injection based on real-time forecast
+  if (weatherForecast) {
+    climateType = `${weatherForecast.condition} (${weatherForecast.highTempC}°C / ${weatherForecast.lowTempC}°C)`;
+    weatherSummary = `Forecast: ${weatherForecast.condition}, Current: ${weatherForecast.currentTempC}°C (Feels like ${weatherForecast.feelsLikeC}°C). Precip Chance: ${weatherForecast.precipitationChance}%, Humidity: ${weatherForecast.humidityPercent}%.`;
+
+    // Rain / Precipitation Gear
+    if (weatherForecast.precipitationChance >= 30) {
+      if (!items.some(i => i.id === 'weather-umbrella')) {
+        items.push({
+          id: 'weather-umbrella',
+          category: 'destination_specific',
+          name: 'Compact Windproof Travel Umbrella',
+          quantity: 1,
+          packed: false,
+          isEssential: true,
+          notes: `🌧️ Forecast Alert: ${weatherForecast.precipitationChance}% chance of rain. Fits in daypack.`
+        });
+      }
+      if (!items.some(i => i.id === 'weather-raincoat')) {
+        items.push({
+          id: 'weather-raincoat',
+          category: 'clothing',
+          name: 'Lightweight Packable Rain Poncho / Jacket',
+          quantity: 1,
+          packed: false,
+          isEssential: true,
+          notes: 'Breathable waterproof shell for sudden showers'
+        });
+      }
+    }
+
+    // High Heat / UV Gear
+    if (weatherForecast.uvIndex >= 6 || weatherForecast.highTempC >= 28) {
+      if (!items.some(i => i.id === 'dest-sunscreen')) {
+        items.push({
+          id: 'dest-sunscreen',
+          category: 'toiletries',
+          name: 'Broad-Spectrum SPF 50+ Sunscreen (< 100ml)',
+          quantity: 1,
+          packed: false,
+          isEssential: true,
+          notes: `☀️ High UV Index (${weatherForecast.uvIndex}): Reapply every 2 hours.`
+        });
+      }
+      if (!items.some(i => i.id === 'dest-sunhat')) {
+        items.push({
+          id: 'dest-sunhat',
+          category: 'clothing',
+          name: 'Packable UV Sun Hat / Cap',
+          quantity: 1,
+          packed: false,
+          isEssential: false,
+          notes: 'Protects head and neck during midday sightseeing'
+        });
+      }
+    }
+
+    // Cold / Low Temperatures Gear
+    if (weatherForecast.lowTempC <= 14 || weatherForecast.currentTempC <= 15) {
+      if (!items.some(i => i.id === 'dest-thermals')) {
+        items.push({
+          id: 'dest-thermals',
+          category: 'clothing',
+          name: 'Thermal Base Layer Top & Bottom',
+          quantity: 1,
+          packed: false,
+          isEssential: true,
+          notes: `❄️ Chilly Forecast (Lows ${weatherForecast.lowTempC}°C): Moisture-wicking warmth`
+        });
+      }
+      if (!items.some(i => i.id === 'weather-scarf')) {
+        items.push({
+          id: 'weather-scarf',
+          category: 'clothing',
+          name: 'Woolen / Cashmere Travel Scarf',
+          quantity: 1,
+          packed: false,
+          isEssential: false,
+          notes: 'Versatile for drafty flights and cool evening breezes'
+        });
+      }
+    }
+  }
+
   return {
     destinationClimate: climateType,
     weatherSummary,
     recommendedDressCode: dressCode,
     durationDays: days,
     tripType: tripType as any,
+    weatherForecast,
     items,
     lastGeneratedAt: new Date().toISOString()
   };

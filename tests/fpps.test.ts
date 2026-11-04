@@ -451,6 +451,54 @@ const totalGoldBizMiles = bizMiles + goldBonus;
 assert.strictEqual(totalGoldBizMiles, Math.round(bizMiles * 1.5), 'Gold tier should add 50% bonus miles');
 console.log('✓ Frequent Flyer Miles Estimator tests passed.');
 
+// Test 16: Aggregated Airline Passenger Satisfaction Scores & Reviews
+console.log('16. Testing Aggregated Passenger Satisfaction Scores & Verified Reviews...');
+import { getAirlineReviews, AIRLINE_REVIEWS_REGISTRY } from '../src/data/airlineReviews.ts';
+
+const indigoReviews = getAirlineReviews('IndiGo');
+assert.ok(indigoReviews, 'IndiGo reviews must be present');
+assert.strictEqual(indigoReviews.airlineCode, '6E');
+assert.ok(indigoReviews.overallRating >= 1 && indigoReviews.overallRating <= 5, 'Overall rating must be between 1 and 5');
+assert.ok(indigoReviews.totalReviews > 1000, 'Total reviews count should be substantial');
+assert.ok(indigoReviews.recommendPercent >= 50, 'Recommendation percent should be valid');
+assert.ok(indigoReviews.ratingBreakdown.onTimeReliability >= 4.0, 'IndiGo should score high on on-time reliability');
+assert.ok(indigoReviews.recentReviews.length >= 2, 'Should include recent verified passenger reviews');
+assert.ok(indigoReviews.recentReviews[0].author, 'Review should have author');
+assert.ok(indigoReviews.recentReviews[0].rating <= 5, 'Rating should be <= 5');
+
+const emiratesReviews = getAirlineReviews('Emirates');
+assert.ok(emiratesReviews.overallRating >= 4.0, 'Emirates should have high passenger rating');
+assert.ok(emiratesReviews.ratingBreakdown.foodAndBeverage >= 4.0, 'Emirates dining rating should be high');
+assert.ok(emiratesReviews.awards.length > 0, 'Emirates should have recognized industry awards');
+console.log('✓ Airline Passenger Satisfaction & Verified Reviews tests passed.');
+
+// Test 17: Smart Packing Helper & Weather-Aware Packing Checklist
+console.log('17. Testing Smart Packing Helper & Weather-Aware Packing Generator...');
+import { getLocalWeatherForecast } from '../src/services/weatherService.ts';
+
+// Rainy destination (London)
+const londonWeather = getLocalWeatherForecast('London');
+assert.ok(londonWeather.precipitationChance >= 50, 'London forecast should predict significant rain');
+assert.ok(londonWeather.dailyForecast.length === 5, 'Should provide 5-day weather forecast');
+assert.ok(londonWeather.advisories.length > 0, 'Should include actionable meteorological advisories');
+
+const londonChecklist = generateLocalChecklist('London', 5, 'leisure', londonWeather);
+assert.ok(londonChecklist.items.length > 10, 'Checklist should contain comprehensive items');
+const umbrellaItem = londonChecklist.items.find(i => i.id === 'weather-umbrella');
+assert.ok(umbrellaItem, 'London rainy forecast must inject weather-umbrella');
+assert.ok(umbrellaItem?.isEssential, 'Umbrella should be marked essential for high rain probability');
+assert.ok(umbrellaItem?.notes?.includes('Forecast Alert'), 'Umbrella note should cite forecast alert');
+
+// Desert destination (Dubai)
+const dubaiWeather = getLocalWeatherForecast('Dubai');
+assert.ok(dubaiWeather.uvIndex >= 7, 'Dubai forecast should have high UV index');
+assert.strictEqual(dubaiWeather.precipitationChance, 0, 'Dubai precipitation should be near 0');
+const dubaiWeatherChecklist = generateLocalChecklist('Dubai', 4, 'leisure', dubaiWeather);
+const sunscreenItem = dubaiWeatherChecklist.items.find(i => i.name.toLowerCase().includes('sunscreen'));
+assert.ok(sunscreenItem, 'Dubai weather checklist must include high SPF sunscreen');
+console.log('✓ Smart Packing Helper & Weather-Aware Checklist tests passed.');
+
 console.log('\n=============================================');
-console.log('ALL FPPS TEST SUITES PASSED CLEANLY (15/15)');
+console.log('ALL FPPS TEST SUITES PASSED CLEANLY (17/17)');
 console.log('=============================================\n');
+process.exit(0);

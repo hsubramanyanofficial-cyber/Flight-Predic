@@ -11,6 +11,8 @@ import { predictFlightFare, FPPS_MODEL_METADATA } from './src/ml/model.ts';
 import { getRouteAnalytics, evaluatePriceIntelligence } from './src/data/analytics.ts';
 import { generateFlightOffers } from './src/services/flightEngine.ts';
 import { generateLocalChecklist } from './src/services/packingService.ts';
+import { getAirlineReviews, AIRLINE_REVIEWS_REGISTRY } from './src/data/airlineReviews.ts';
+import { getLocalWeatherForecast } from './src/services/weatherService.ts';
 import { CabinClass, TrackedFlight, InAppNotification, UserPreferences } from './src/types/index.ts';
 
 dotenv.config();
@@ -954,6 +956,44 @@ app.get('/api/currency/rates', (req: Request, res: Response) => {
     inrPerUnit: inverseRates,
     source: 'Global Interbank Forex Benchmark Feed'
   });
+});
+
+// -------------------------------------------------------------
+// PASSENGER SATISFACTION & AIRLINE REVIEWS API
+// -------------------------------------------------------------
+app.post('/api/airlines/reviews', (req: Request, res: Response) => {
+  const { airlineCodes, airlineNames } = req.body;
+  const queries: string[] = (airlineCodes && airlineCodes.length > 0)
+    ? airlineCodes
+    : (airlineNames && airlineNames.length > 0)
+    ? airlineNames
+    : ['6E', 'AI'];
+
+  const results = queries.map((q: string) => getAirlineReviews(q));
+  res.json({
+    success: true,
+    data: results,
+    timestamp: new Date().toISOString(),
+    provider: 'Global Travel Passenger Review & Satisfaction API Feed'
+  });
+});
+
+// -------------------------------------------------------------
+// DESTINATION WEATHER FORECAST API
+// -------------------------------------------------------------
+app.post('/api/weather/forecast', async (req: Request, res: Response) => {
+  const { city } = req.body;
+  try {
+    const forecast = getLocalWeatherForecast(city || 'Dubai');
+    res.json({
+      success: true,
+      forecast,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    console.error('Weather forecast API error:', err);
+    res.status(500).json({ success: false, message: 'Failed to retrieve destination weather forecast' });
+  }
 });
 
 // -------------------------------------------------------------

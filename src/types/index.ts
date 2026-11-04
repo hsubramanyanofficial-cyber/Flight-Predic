@@ -237,6 +237,7 @@ export interface PackingChecklistData {
   recommendedDressCode: string;
   durationDays: number;
   tripType?: 'leisure' | 'business' | 'adventure' | 'beach' | 'winter' | 'cultural';
+  weatherForecast?: import('../services/weatherService').DestinationWeatherForecast;
   items: PackingItem[];
   lastGeneratedAt: string;
 }
